@@ -1,0 +1,1 @@
+CreateObject("Wscript.Shell").Run "server.bat",0,True

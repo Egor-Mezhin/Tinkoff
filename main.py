@@ -87,7 +87,7 @@ root.title("TCRM+")
 root.geometry("218x640")
 root.resizable(width=False, height=False)
 root.attributes("-topmost",True)
-
+root.iconbitmap('icon.ico')
 class VerticalScrolledFrame(ttk.Frame):
 
     def __init__(self, parent, *args, **kw):
