@@ -6,10 +6,19 @@ import sqlite3
 conn = sqlite3.connect('orders.db')
 cur = conn.cursor()
 
-def validate(new_value):                                                
+def validate(new_value):     
+    """Проверка на ввод цифр в поле ввода"""                                           
     return new_value == "" or new_value.isnumeric()
 
 def copy(val, buffer = None):
+    """
+    Копирование данных в буфер обмена
+    
+    val - Копируемый текст
+    buffer - Текстовое поле где отражен скопированный текст
+
+    pyperclip.copy - копирует val в буфер обмена
+    """
 
     pyperclip.copy(val.format(
         aut_text = main.aut_text_entry.get()))
@@ -21,6 +30,17 @@ def copy(val, buffer = None):
 
 
 def add_copy(val, buffer):
+    """
+    Добавление к копированным данным в буфер обмена
+    
+    val - Копируемый текст
+    buffer - Текстовое поле где отражен скопированный текст
+
+    text - Соединяет содержание буфера обмена с val
+    pyperclip.copy - копирует text в буфер обмена
+    buffer.insert - Вставляет в текстовое поле val
+    """
+        
     text = pyperclip.paste() + val.format(
         aut_text = main.aut_text_entry.get())
 
@@ -31,6 +51,15 @@ def add_copy(val, buffer):
 
 
 def past(empty):
+
+    """
+    Вставляет в текстовое поле содержимое буфера обмена
+    
+    empty - Поле в которое нужно вставить текст
+
+    empty_str - Содержание буфера обмена
+    empty_new - Новый текст если в конце empty_str есть пробел
+    """
 
     empty_str = pyperclip.paste()
     empty_new = str()
@@ -46,6 +75,13 @@ def past(empty):
 
 def f_counter_plus(empty):
 
+    """
+    Добавляет к счетчику значение 1
+    empty - поле ввода
+
+    cur.execute - Увеличивает счетчик в БД
+    """
+
     cur.execute("""
     UPDATE counter 
     SET count = count + 1""")
@@ -59,6 +95,14 @@ def f_counter_plus(empty):
         empty.insert(0, "1")
 
 def f_counter_minus(empty):
+    
+    """
+    Убавляет значение 1 со счетчика
+    empty - поле ввода
+
+    cur.execute - Уменьшает счетчик в БД
+    """
+
     if empty.get() > "0":
 
         cur.execute("""
@@ -73,6 +117,13 @@ def f_counter_minus(empty):
         pass
 
 def f_counter_null(empty):
+    
+    """
+    Обнуляет счетчик
+    empty - поле ввода
+
+    cur.execute - Обнуляет счетчик в БД
+    """
 
     cur.execute("""
     UPDATE counter 
@@ -87,8 +138,11 @@ root.title("TCRM+")
 root.geometry("218x640")
 root.resizable(width=False, height=False)
 root.attributes("-topmost",True)
-root.iconbitmap('icon.ico')
+root.iconbitmap("icon.ico")
+
 class VerticalScrolledFrame(ttk.Frame):
+
+    "Скролл бар"
 
     def __init__(self, parent, *args, **kw):
         ttk.Frame.__init__(self, parent, *args, **kw)
@@ -120,6 +174,29 @@ class VerticalScrolledFrame(ttk.Frame):
         canvas.bind('<Configure>', _configure_canvas)
 
 class main:
+
+    """
+    Основная панель, содержит: 
+    Поле вставки из буфера, 
+    счетчик,
+    Вкладки.
+
+    frame - Основной фрейм растянутый на все поле
+    frame_up - Фрейм шапки приложения
+    frame_up_aut_text - Фрейм для вставки
+    frame_up_counter - Фрейм счетчика
+
+    frame_bot - Фрейм Вкладок - растянут на всю доступную высоту
+
+    frame_Ready, frame_assembling, frame_rare - Фреймы для закладок
+
+    aut_text_btn - Кнопка вставки в поле aut_text_entry
+
+    counter_plus, counter_minus, counter_null - Кнопки контроля счетчика
+
+    counter - Поле ввода счетчика
+    """
+
     frame = Frame(root)
     frame.place(rely=0, relheight=1, relwidth=1)
 
@@ -138,7 +215,7 @@ class main:
     aut_text_btn = Button(frame_up_aut_text, text = "Вставить", width=10, command= lambda: past(main.aut_text_entry))
     aut_text_btn.grid(column=0, row = 0)
 
-    aut_text_entry = Entry(frame_up_aut_text, name="name", width=100)
+    aut_text_entry = Entry(frame_up_aut_text, width=100)
     aut_text_entry.grid(column=1, row = 0)
 
     counter_plus = Button(frame_up_counter, text = "+", width=10, command= lambda: f_counter_plus(main.counter))
@@ -181,6 +258,16 @@ class main:
 
 class Ready:
     
+    """
+    Вкладка готовых скриптов. Содержит вкладки категорий скриптов и кнопки для копирования скриптов
+
+    select_title - Список всех категорий
+    select_text - Список всех значений с выбранной категории
+
+    frame_Ready - Вкладка категории
+    btn_readys - Кнопка для копирования скрипта
+    """
+
     notebook_ready = ttk.Notebook(main.frame_Ready)
     notebook_ready.pack(expand=True, fill=BOTH)
 
@@ -211,14 +298,46 @@ class Ready:
 
 
 class Assembling:
+
+    """
+    Вкладка сборочных скриптов. Имеет Кнопки:
+    Копировать,
+    Добавить к скопированному,
+    Вперед X скриптов
+    Назад X скриптов
+
+    Имеет текстовое поле для просмотра скопированного
+
+    frame_assembling_left - Фрейм для кнопок копировать и добавить
+    frame_assembling_right - Фрейм для титульников для кнопок копирования
+
+    frame_assembling_bot - Фрейм для кнопок переключения и текстового поля буфера
+    frame_assembling_bot_arrow - Фрейм для кнопок переключения
+    frame_assembling_bot_text - Фрейм для текстового поля буфера
+
+    count - счетчик для столбцов
+    assembling_list - список титульников и текстов сборочных скриптов
+
+    btn_assembling - Кнопка копировать
+    add_btn_assembling - кнопка добавить к скопированному
+    frame_lb - фрейм для текста
+    lb - титульник для кнопок копирования
+    """
+
     frame_assembling_left = Frame(main.frame_assembling, width=43.6, height=600)
     frame_assembling_left.pack(side=LEFT, anchor="nw")
 
     frame_assembling_right = Frame(main.frame_assembling, width=174.8, height=600)
     frame_assembling_right.pack(side=LEFT, anchor="nw")
 
-    frame_assembling_bot = Frame(main.frame_assembling, width=218, height=40)
-    frame_assembling_bot.place(y = 450)
+    frame_assembling_bot = Frame(main.frame_assembling, width=218, height=100)
+    frame_assembling_bot.place(y = 400)
+
+    frame_assembling_bot_arrow = Frame(frame_assembling_bot, width=218, height=25, background="red")
+    frame_assembling_bot_arrow.grid(column=0, row = 0)
+
+    frame_assembling_bot_text = Frame(frame_assembling_bot, width=218, height=100, background="green")
+    frame_assembling_bot_text.grid(column=0, row = 1)
 
     count = 0
 
@@ -237,16 +356,26 @@ class Assembling:
         add_btn_assembling = Button(frame_assembling_left, width = 2, text = "+", bg = "yellow", command = lambda val=val: add_copy(val, buffer_assembling))
         add_btn_assembling.grid(column=1, row = count)
 
-        frame_btn_lb = Frame(frame_assembling_right)
-        frame_btn_lb.place(rely=0.043 * count, relheight=1, relwidth=1)
+        frame_lb = Frame(frame_assembling_right)
+        frame_lb.place(rely=0.043 * count, relheight=1, relwidth=1)
 
-        btn_lb = Label(frame_btn_lb,  text = key)
-        btn_lb.grid(column=0, row = count)
+        lb = Label(frame_lb,  text = key)
+        lb.grid(column=0, row = count)
 
         count += 1
 
-    buffer_assembling = Text(frame_assembling_bot, width=25, height=4, wrap=WORD)
-    buffer_assembling.pack(padx=10, pady=10, ipady=30)
+
+    left_btn = Button(frame_assembling_bot_arrow, width = 11, text = "<--", bg = "yellow")
+    left_btn.pack(side=LEFT)
+
+    right_btn = Button(frame_assembling_bot_arrow, width = 4, text = "1/1", bg = "yellow")
+    right_btn.pack(side=LEFT)
+
+    right_btn = Button(frame_assembling_bot_arrow, width = 11, text = "-->", bg = "yellow")
+    right_btn.pack(side=LEFT)
+
+    buffer_assembling = Text(frame_assembling_bot_text, width=25, height=7, wrap=WORD)
+    buffer_assembling.pack()
     buffer_assembling.bind("<Key>", lambda e: "break") 
     
 root.mainloop()
