@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter import ttk
 import pyperclip
 import sqlite3
-
+import math
 conn = sqlite3.connect('orders.db')
 cur = conn.cursor()
 
@@ -132,6 +132,159 @@ def f_counter_null(empty):
 
     empty.delete(0, END)
     empty.insert(0, "0")
+
+
+def assembling_next_page():
+    if Assembling.page != Assembling.len_assembling_list:
+        Assembling.page += 1
+        Assembling.page_list += 14
+        Assembling.center_btn.configure(text = f"{Assembling.page}/{Assembling.len_assembling_list}")
+
+        cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {Assembling.page_list - 1};")
+        val_list = cur.fetchall()
+
+        for i_num, i_val in enumerate(Assembling.label_list):
+            try:
+                i_val.configure(text = val_list[i_num][0])
+            except IndexError:
+                i_val.configure(text = "")
+        
+        for i_num, i_val in enumerate(Assembling.btn_assembling_list):
+            try:
+                val = val_list[i_num][1]
+                i_val.configure(command = lambda val=val: copy(val, buffer_assembling))
+            except IndexError:
+                i_val.configure(state='disabled')
+
+        for i_num, i_val in enumerate(Assembling.add_btn_assembling_list):
+            try:
+                val = val_list[i_num][1]
+                i_val.configure(command = lambda val=val: add_copy(val, buffer_assembling))
+            except IndexError:
+                i_val.configure(state='disabled')
+        
+    
+
+def assembling_back_page():
+    if Assembling.page != 1:
+        Assembling.page -= 1
+        Assembling.page_list -= 14
+        Assembling.center_btn.configure(text = f"{Assembling.page}/{Assembling.len_assembling_list}")
+
+        cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {Assembling.page_list - 1};")
+        val_list = cur.fetchall()
+
+        for i_num, i_val in enumerate(Assembling.label_list):
+            i_val.configure(text = val_list[i_num][0])
+
+        for i_num, i_val in enumerate(Assembling.btn_assembling_list):
+                val = val_list[i_num][1]
+                i_val.configure(state='normal', command = lambda val=val: copy(val, buffer_assembling))
+
+        for i_num, i_val in enumerate(Assembling.add_btn_assembling_list):
+                val = val_list[i_num][1]
+                i_val.configure(state='normal', command = lambda val=val: add_copy(val, buffer_assembling))
+
+def assembling_first_page():
+    Assembling.page = 1
+    Assembling.page_list = 1
+    Assembling.center_btn.configure(text = f"{Assembling.page}/{Assembling.len_assembling_list}")
+
+    cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {Assembling.page_list - 1};")
+    val_list = cur.fetchall()
+
+    for i_num, i_val in enumerate(Assembling.label_list):
+        i_val.configure(text = val_list[i_num][0])
+
+    for i_num, i_val in enumerate(Assembling.btn_assembling_list):
+            val = val_list[i_num][1]
+            i_val.configure(state='normal', command = lambda val=val: copy(val, buffer_assembling))
+
+    for i_num, i_val in enumerate(Assembling.add_btn_assembling_list):
+            val = val_list[i_num][1]
+            i_val.configure(state='normal', command = lambda val=val: add_copy(val, buffer_assembling))
+
+def ready_next_page(category):
+    attributes = Ready.attributes_list[category]
+    btn_list = Ready.btn_ready_list[category]
+
+    if attributes["page"] != attributes["len_ready_text"]:
+        attributes["page"] += 1
+        attributes["page_list"] += 10
+
+        len_page = attributes["len_ready_text"]
+        page = attributes["page"]
+        page_list = attributes["page_list"]
+
+        attributes["|"].configure(text = f"{page}/{len_page}")
+        
+        cur.execute(f"""
+                    SELECT ready_text.title, ready_text.text
+                    FROM ready_text
+                    JOIN ready_category ON ready_category.id = ready_text.id_category
+                    WHERE ready_category.title = "{category[0]}"
+                    LIMIT 10 OFFSET {page_list};
+                    """)
+        val_list = cur.fetchall()
+        for i_num, i_val in enumerate(btn_list):
+            try:
+                val = val_list[i_num][1]
+                i_val.configure(text = val_list[i_num][0], command = lambda val=val: copy(val))
+            except IndexError:
+                i_val.configure(text = "", state='disabled')
+
+
+def ready_back_page(category):
+    attributes = Ready.attributes_list[category]
+    btn_list = Ready.btn_ready_list[category]
+
+    if attributes["page"] != 1:
+        attributes["page"] -= 1
+        attributes["page_list"] -= 10
+
+        len_page = attributes["len_ready_text"]
+        page = attributes["page"]
+        page_list = attributes["page_list"]
+
+        attributes["|"].configure(text = f"{page}/{len_page}")
+        
+        cur.execute(f"""
+                    SELECT ready_text.title, ready_text.text
+                    FROM ready_text
+                    JOIN ready_category ON ready_category.id = ready_text.id_category
+                    WHERE ready_category.title = "{category[0]}"
+                    LIMIT 10 OFFSET {page_list};
+                    """)
+        val_list = cur.fetchall()
+        for i_num, i_val in enumerate(btn_list):
+            val = val_list[i_num][1]
+            i_val.configure(state='normal', text = val_list[i_num][0], command = lambda val=val: copy(val))
+
+
+def ready_first_page(category):
+    attributes = Ready.attributes_list[category]
+    btn_list = Ready.btn_ready_list[category]
+
+    attributes["page"] = 1
+    attributes["page_list"] = 1
+
+    len_page = attributes["len_ready_text"]
+    page = attributes["page"]
+    page_list = attributes["page_list"]
+
+    attributes["|"].configure(text = f"{page}/{len_page}")
+    
+    cur.execute(f"""
+                SELECT ready_text.title, ready_text.text
+                FROM ready_text
+                JOIN ready_category ON ready_category.id = ready_text.id_category
+                WHERE ready_category.title = "{category[0]}"
+                LIMIT 10 OFFSET {page_list};
+                """)
+    val_list = cur.fetchall()
+    for i_num, i_val in enumerate(btn_list):
+        val = val_list[i_num][1]
+        i_val.configure(state='normal', text = val_list[i_num][0], command = lambda val=val: copy(val))
 
 root = Tk()
 root.title("TCRM+")
@@ -270,13 +423,16 @@ class Ready:
 
     notebook_ready = ttk.Notebook(main.frame_Ready)
     notebook_ready.pack(expand=True, fill=BOTH)
-
+    
     select_title = cur.execute("""
     SELECT title 
     FROM ready_category;
     """)
     ready_category = cur.fetchall()
-    
+
+    btn_ready_list = dict()
+    attributes_list = dict()
+
     for i_category in ready_category:
         frame_Ready = ttk.Frame(notebook_ready)
         frame_Ready.pack(fill=BOTH, expand=True)
@@ -290,15 +446,46 @@ class Ready:
         WHERE ready_category.title = "{i_category[0]}";
         """)
         ready_text = cur.fetchall()
-        for i_val in ready_text:
-            key = i_val[0]
-            val = i_val[1]
-            btn_readys = Button(frame_Ready, text = key, bg = "yellow", command= lambda val=val: copy(val)) 
-            btn_readys.pack(fill = X, pady = 10)
 
+        page = 1
+        page_list = 1
+        len_ready_text = math.ceil(len(ready_text) / 10)
+
+        btn_ready_list[i_category] = list()
+        attributes_list[i_category] = {
+            "<--": None,
+            "|": None,
+            "-->": None,
+            "page": page,
+            "page_list": page_list,
+            "len_ready_text": len_ready_text,
+            }
+        for i_val in range(10):
+            try:
+                key = ready_text[i_val][0]
+                val = ready_text[i_val][1]
+
+                btn_readys = Button(frame_Ready, text = key, bg = "yellow", command= lambda val=val: copy(val)) 
+                btn_readys.pack(fill = X, pady = 10)
+                btn_ready_list[i_category].append(btn_readys)
+                
+            except IndexError:
+                btn_readys = Button(frame_Ready, text = "", bg = "yellow", state='disabled') 
+                btn_readys.pack(fill = X, pady = 10)
+
+        left_btn = Button(frame_Ready, width = 11, text = "<--", bg = "yellow", command = lambda i_category=i_category: ready_back_page(i_category))
+        left_btn.pack(side=LEFT)
+        attributes_list[i_category]["<--"] = left_btn
+
+        center_btn = Button(frame_Ready, width = 4, text = f"{page}/{len_ready_text}", bg = "yellow", command = lambda i_category=i_category: ready_first_page(i_category))
+        center_btn.pack(side=LEFT)
+        attributes_list[i_category]["|"] = center_btn
+
+        right_btn = Button(frame_Ready, width = 11, text = "-->", bg = "yellow", command = lambda i_category=i_category: ready_next_page(i_category))
+        right_btn.pack(side=LEFT)
+        attributes_list[i_category]["-->"] = right_btn
 
 class Assembling:
-
     """
     Вкладка сборочных скриптов. Имеет Кнопки:
     Копировать,
@@ -340,11 +527,18 @@ class Assembling:
     frame_assembling_bot_text.grid(column=0, row = 1)
 
     count = 0
+    page = 1
+    page_list = 1
 
     cur.execute("SELECT title, text FROM assembling_list;")
     assembling_list = cur.fetchall()
+    len_assembling_list = math.ceil(len(assembling_list) / 14)
 
-    for i_val in assembling_list:
+    btn_assembling_list = []
+    add_btn_assembling_list = []
+    label_list = []
+
+    for i_val in assembling_list[page_list - 1: page_list + 13]:
         global btn_assembling, add_btn_assembling, buffer_assembling
 
         key = i_val[0]
@@ -352,30 +546,35 @@ class Assembling:
 
         btn_assembling = Button(frame_assembling_left, width = 2, text = "С", bg = "yellow", command = lambda val=val: copy(val, buffer_assembling))
         btn_assembling.grid(column=0, row = count)
+        btn_assembling_list.append(btn_assembling)
 
         add_btn_assembling = Button(frame_assembling_left, width = 2, text = "+", bg = "yellow", command = lambda val=val: add_copy(val, buffer_assembling))
         add_btn_assembling.grid(column=1, row = count)
+        add_btn_assembling_list.append(add_btn_assembling)
 
         frame_lb = Frame(frame_assembling_right)
         frame_lb.place(rely=0.043 * count, relheight=1, relwidth=1)
 
         lb = Label(frame_lb,  text = key)
         lb.grid(column=0, row = count)
+        label_list.append(lb)
 
         count += 1
 
 
-    left_btn = Button(frame_assembling_bot_arrow, width = 11, text = "<--", bg = "yellow")
+    left_btn = Button(frame_assembling_bot_arrow, width = 11, text = "<--", bg = "yellow", command = assembling_back_page)
     left_btn.pack(side=LEFT)
 
-    right_btn = Button(frame_assembling_bot_arrow, width = 4, text = "1/1", bg = "yellow")
-    right_btn.pack(side=LEFT)
+    center_btn = Button(frame_assembling_bot_arrow, width = 4, text = f"{page}/{len_assembling_list}", bg = "yellow", command = assembling_first_page)
+    center_btn.pack(side=LEFT)
 
-    right_btn = Button(frame_assembling_bot_arrow, width = 11, text = "-->", bg = "yellow")
+    right_btn = Button(frame_assembling_bot_arrow, width = 11, text = "-->", bg = "yellow", command = assembling_next_page)
     right_btn.pack(side=LEFT)
 
     buffer_assembling = Text(frame_assembling_bot_text, width=25, height=7, wrap=WORD)
     buffer_assembling.pack()
     buffer_assembling.bind("<Key>", lambda e: "break") 
-    
+
 root.mainloop()
+
+input()
