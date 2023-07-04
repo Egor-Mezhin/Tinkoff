@@ -6,9 +6,18 @@ import math
 conn = sqlite3.connect('orders.db')
 cur = conn.cursor()
 
-def validate(new_value):     
-    """Проверка на ввод цифр в поле ввода"""                                           
-    return new_value == "" or new_value.isnumeric()
+
+def switch_tab(notebook):
+    # получаем текущий индекс выбранной вкладки
+    current_tab = notebook.select()
+    # получаем индекс следующей вкладки
+    next_tab = notebook.index(current_tab) + 1
+    notebook.hide(current_tab)
+    # если текущая вкладка является последней, переключаемся на первую вкладку
+    if next_tab >= notebook.index("end"):
+        next_tab = 0
+    # переключаемся на следующую вкладку
+    notebook.select(next_tab)
 
 def copy(val, buffer = None):
     """
@@ -20,13 +29,11 @@ def copy(val, buffer = None):
     pyperclip.copy - копирует val в буфер обмена
     """
 
-    pyperclip.copy(val.format(
-        aut_text = main.aut_text_entry.get()))
+    pyperclip.copy(val.format(main.aut_text_entry.get()))
 
     if buffer != None:
         buffer.delete("1.0", END)
-        buffer.insert("2.0", val.format(
-        aut_text = main.aut_text_entry.get()))
+        buffer.insert("2.0", val.format(main.aut_text_entry.get()))
 
 
 def add_copy(val, buffer):
@@ -41,13 +48,11 @@ def add_copy(val, buffer):
     buffer.insert - Вставляет в текстовое поле val
     """
         
-    text = pyperclip.paste() + val.format(
-        aut_text = main.aut_text_entry.get())
+    text = pyperclip.paste() + val.format(main.aut_text_entry.get())
 
     pyperclip.copy(text)
 
-    buffer.insert(END, val.format(
-        aut_text = main.aut_text_entry.get()))
+    buffer.insert(END, val.format(main.aut_text_entry.get()))
 
 
 def past(empty):
@@ -73,7 +78,7 @@ def past(empty):
     empty.insert(0, empty_new)
 
 
-def f_counter_plus(empty):
+def f_counter_plus(label):
 
     """
     Добавляет к счетчику значение 1
@@ -87,14 +92,12 @@ def f_counter_plus(empty):
     SET count = count + 1""")
     conn.commit()
 
-    if empty.get() != "":
-        new_empty = str(int(empty.get()) + 1)
-        empty.delete(0, END)
-        empty.insert(0, new_empty)
-    else:
-        empty.insert(0, "1")
+    
+    new_empty = str(int(label["text"]) + 1)
+    label["text"] = new_empty
 
-def f_counter_minus(empty):
+
+def f_counter_minus(label):
     
     """
     Убавляет значение 1 со счетчика
@@ -103,20 +106,18 @@ def f_counter_minus(empty):
     cur.execute - Уменьшает счетчик в БД
     """
 
-    if empty.get() > "0":
+    if label["text"] > "0":
 
         cur.execute("""
         UPDATE counter 
         SET count = count - 1""")
         conn.commit()
 
-        new_empty = str(int(empty.get()) - 1)
-        empty.delete(0, END)
-        empty.insert(0, new_empty)
-    else:
-        pass
+        new_empty = str(int(label["text"]) - 1)
+        label["text"] = new_empty
 
-def f_counter_null(empty):
+
+def f_counter_null(label):
     
     """
     Обнуляет счетчик
@@ -130,14 +131,13 @@ def f_counter_null(empty):
     SET count = 0""")
     conn.commit()
 
-    empty.delete(0, END)
-    empty.insert(0, "0")
+    label["text"] = 0
 
 
 def assembling_next_page():
     if Assembling.page != Assembling.len_assembling_list:
         Assembling.page += 1
-        Assembling.page_list += 14
+        Assembling.page_list += 15
         Assembling.center_btn.configure(text = f"{Assembling.page}/{Assembling.len_assembling_list}")
 
         cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {Assembling.page_list - 1};")
@@ -146,6 +146,7 @@ def assembling_next_page():
         for i_num, i_val in enumerate(Assembling.label_list):
             try:
                 i_val.configure(text = val_list[i_num][0])
+                
             except IndexError:
                 i_val.configure(text = "")
         
@@ -153,6 +154,7 @@ def assembling_next_page():
             try:
                 val = val_list[i_num][1]
                 i_val.configure(command = lambda val=val: copy(val, buffer_assembling))
+
             except IndexError:
                 i_val.configure(state='disabled')
 
@@ -160,6 +162,7 @@ def assembling_next_page():
             try:
                 val = val_list[i_num][1]
                 i_val.configure(command = lambda val=val: add_copy(val, buffer_assembling))
+
             except IndexError:
                 i_val.configure(state='disabled')
         
@@ -168,7 +171,7 @@ def assembling_next_page():
 def assembling_back_page():
     if Assembling.page != 1:
         Assembling.page -= 1
-        Assembling.page_list -= 14
+        Assembling.page_list -= 15
         Assembling.center_btn.configure(text = f"{Assembling.page}/{Assembling.len_assembling_list}")
 
         cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {Assembling.page_list - 1};")
@@ -187,7 +190,7 @@ def assembling_back_page():
 
 def assembling_first_page():
     Assembling.page = 1
-    Assembling.page_list = 1
+    Assembling.page_list = 0
     Assembling.center_btn.configure(text = f"{Assembling.page}/{Assembling.len_assembling_list}")
 
     cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {Assembling.page_list - 1};")
@@ -204,25 +207,25 @@ def assembling_first_page():
             val = val_list[i_num][1]
             i_val.configure(state='normal', command = lambda val=val: add_copy(val, buffer_assembling))
 
-def ready_next_page(category):
-    attributes = Ready.attributes_list[category]
-    btn_list = Ready.btn_ready_list[category]
+def ready_next_page():
+    attributes = Ready
+    btn_list = Ready.btn_ready_list
 
-    if attributes["page"] != attributes["len_ready_text"]:
-        attributes["page"] += 1
-        attributes["page_list"] += 10
+    if attributes.page != attributes.len_ready_text:
+        attributes.page += 1
+        attributes.page_list += 10
 
-        len_page = attributes["len_ready_text"]
-        page = attributes["page"]
-        page_list = attributes["page_list"]
+        len_page = attributes.len_ready_text
+        page = attributes.page
+        page_list = attributes.page_list
 
-        attributes["|"].configure(text = f"{page}/{len_page}")
+        attributes.center_btn.configure(text = f"{page}/{len_page}")
         
         cur.execute(f"""
                     SELECT ready_text.title, ready_text.text
                     FROM ready_text
                     JOIN ready_category ON ready_category.id = ready_text.id_category
-                    WHERE ready_category.title = "{category[0]}"
+                    WHERE ready_category.title = "{attributes.category}"
                     LIMIT 10 OFFSET {page_list};
                     """)
         val_list = cur.fetchall()
@@ -230,61 +233,106 @@ def ready_next_page(category):
             try:
                 val = val_list[i_num][1]
                 i_val.configure(text = val_list[i_num][0], command = lambda val=val: copy(val))
+
             except IndexError:
                 i_val.configure(text = "", state='disabled')
 
 
-def ready_back_page(category):
-    attributes = Ready.attributes_list[category]
-    btn_list = Ready.btn_ready_list[category]
+def ready_back_page():
+    attributes = Ready
+    btn_list = Ready.btn_ready_list
 
-    if attributes["page"] != 1:
-        attributes["page"] -= 1
-        attributes["page_list"] -= 10
+    if attributes.page != 1:
+        attributes.page -= 1
+        attributes.page_list -= 10
 
-        len_page = attributes["len_ready_text"]
-        page = attributes["page"]
-        page_list = attributes["page_list"]
+        len_page = attributes.len_ready_text
+        page = attributes.page
+        page_list = attributes.page_list
 
-        attributes["|"].configure(text = f"{page}/{len_page}")
+        attributes.center_btn.configure(text = f"{page}/{len_page}")
         
         cur.execute(f"""
                     SELECT ready_text.title, ready_text.text
                     FROM ready_text
                     JOIN ready_category ON ready_category.id = ready_text.id_category
-                    WHERE ready_category.title = "{category[0]}"
+                    WHERE ready_category.title = "{attributes.category}"
                     LIMIT 10 OFFSET {page_list};
                     """)
         val_list = cur.fetchall()
         for i_num, i_val in enumerate(btn_list):
+            
+            key = val_list[i_num][0]
             val = val_list[i_num][1]
-            i_val.configure(state='normal', text = val_list[i_num][0], command = lambda val=val: copy(val))
+
+            i_val.configure(text = key, command = lambda val=val: copy(val))
 
 
-def ready_first_page(category):
-    attributes = Ready.attributes_list[category]
-    btn_list = Ready.btn_ready_list[category]
+def ready_first_page():
+    attributes = Ready
+    btn_list = Ready.btn_ready_list
+    
+    attributes.page = 1
+    attributes.page_list = 0
 
-    attributes["page"] = 1
-    attributes["page_list"] = 1
+    len_page = attributes.len_ready_text
+    page = attributes.page
+    page_list = attributes.page_list
 
-    len_page = attributes["len_ready_text"]
-    page = attributes["page"]
-    page_list = attributes["page_list"]
-
-    attributes["|"].configure(text = f"{page}/{len_page}")
+    attributes.center_btn.configure(text = f"{page}/{len_page}")
     
     cur.execute(f"""
                 SELECT ready_text.title, ready_text.text
                 FROM ready_text
                 JOIN ready_category ON ready_category.id = ready_text.id_category
-                WHERE ready_category.title = "{category[0]}"
+                WHERE ready_category.title = "{attributes.category}"
                 LIMIT 10 OFFSET {page_list};
                 """)
     val_list = cur.fetchall()
     for i_num, i_val in enumerate(btn_list):
-        val = val_list[i_num][1]
-        i_val.configure(state='normal', text = val_list[i_num][0], command = lambda val=val: copy(val))
+        try:
+            val = val_list[i_num][1]
+            i_val.configure(text = val_list[i_num][0], command = lambda val=val: copy(val))
+
+        except IndexError:
+            i_val.configure(text = "", state='disabled')
+
+def ready_swap_category(category):
+    Ready.category = category
+    Ready.page = 1
+    Ready.page_list = 0
+
+    cur.execute(f"""
+    SELECT ready_text.title, ready_text.text 
+    FROM ready_text
+    JOIN ready_category ON 
+    ready_category.id = ready_text.id_category
+    WHERE ready_category.title = "{Ready.category}";
+    """)
+    ready_text = cur.fetchall()
+    
+    len_ready_text = math.ceil(len(ready_text) / 10)
+    Ready.len_ready_text = len_ready_text
+
+    for i_val in Ready.category_list:
+        if i_val["text"] == category:
+           i_val.configure(bg = "white", state='disabled') 
+        else:
+            i_val.configure(bg = "yellow", state='normal')
+
+    for i_val in range(10):
+        try:
+            key = ready_text[i_val][0]
+            val = ready_text[i_val][1]
+
+            Ready.btn_ready_list[i_val].configure(text = key, state='normal', command= lambda val=val: copy(val))
+
+        except IndexError:
+            Ready.btn_ready_list[i_val].configure(text = "", state='disabled') 
+    
+    Ready.center_btn.configure(text = f"1/{len_ready_text}")
+
+
 
 root = Tk()
 root.title("TCRM+")
@@ -292,39 +340,6 @@ root.geometry("218x640")
 root.resizable(width=False, height=False)
 root.attributes("-topmost",True)
 root.iconbitmap("icon.ico")
-
-class VerticalScrolledFrame(ttk.Frame):
-
-    "Скролл бар"
-
-    def __init__(self, parent, *args, **kw):
-        ttk.Frame.__init__(self, parent, *args, **kw)
-
-        vscrollbar = ttk.Scrollbar(self, orient=VERTICAL)
-        vscrollbar.pack(fill=Y, side=RIGHT, expand=FALSE)
-        canvas = Tk.Canvas(self, bd=0, highlightthickness=0,
-                           yscrollcommand=vscrollbar.set)
-        canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
-        vscrollbar.config(command=canvas.yview)
-
-        canvas.xview_moveto(0)
-        canvas.yview_moveto(0)
-
-        self.interior = interior = ttk.Frame(canvas)
-        interior_id = canvas.create_window(0, 0, window=interior,
-                                           anchor=NW)
-
-        def _configure_interior(event):
-            size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
-            canvas.config(scrollregion="0 0 %s %s" % size)
-            if interior.winfo_reqwidth() != canvas.winfo_width():
-                canvas.config(width=interior.winfo_reqwidth())
-        interior.bind('<Configure>', _configure_interior)
-
-        def _configure_canvas(event):
-            if interior.winfo_reqwidth() != canvas.winfo_width():
-                canvas.itemconfigure(interior_id, width=canvas.winfo_width())
-        canvas.bind('<Configure>', _configure_canvas)
 
 class main:
 
@@ -380,37 +395,31 @@ class main:
     counter_null = Button(frame_up_counter, text = "0", width=1, command= lambda: f_counter_null(main.counter))
     counter_null.grid(column=2, row = 0)
 
-    vcmd = (root.register(validate), '%P')  
-    counter = Entry(frame_up_counter, name="counter", width= 100, validate="key", validatecommand=vcmd)
-    counter.grid(column=3, row = 0)
     cur.execute("SELECT count FROM counter")
     count = cur.fetchone()[0]
-    counter.insert(0, count)
-    counter.bind("<Key>", lambda e: "break") 
-    
+    counter = Label(frame_up_counter, name="counter", text= count)
+    counter.grid(column=3, row = 0)
 
     # создаем набор вкладок
     notebook = ttk.Notebook(frame_bot)
     notebook.pack(expand=True, fill=BOTH)
 
     # создаем пару фреймвов
-    frame_Ready = ttk.Frame(notebook)
     frame_assembling = ttk.Frame(notebook)
+    frame_Ready = ttk.Frame(notebook)
     frame_rare = ttk.Frame(notebook)
 
-    frame_Ready.pack(fill=BOTH, expand=True)
     frame_assembling.pack(fill=BOTH, expand=True)
+    frame_Ready.pack(fill=BOTH, expand=True)
     frame_rare.pack(fill=BOTH, expand=True)
 
     # добавляем фреймы в качестве вкладок
-    notebook.add(frame_Ready, text="Г")
-    notebook.add(frame_assembling, text="С")
-    notebook.add(frame_rare, text="Р")
-
+    notebook.add(frame_assembling, text="СБОРКА")
+    notebook.add(frame_Ready, text="ГОТОВЫЕ")
+    notebook.add(frame_rare, text="НАСТРОЙКА")
 
 
 class Ready:
-    
     """
     Вкладка готовых скриптов. Содержит вкладки категорий скриптов и кнопки для копирования скриптов
 
@@ -421,69 +430,99 @@ class Ready:
     btn_readys - Кнопка для копирования скрипта
     """
 
-    notebook_ready = ttk.Notebook(main.frame_Ready)
-    notebook_ready.pack(expand=True, fill=BOTH)
+    Ready_Frame = Frame(main.frame_Ready)
+    Ready_Frame.pack(expand=True, fill=BOTH)
+    
+    Canvas_top = Canvas(Ready_Frame, height=25)
+    Canvas_top.pack(anchor=NW, fill=X)
+
+    Сanvas_frame = Frame(Canvas_top, height=25)
+
+    Canvas_top_scrollbar = Frame(Ready_Frame, height=10)
+    Canvas_top_scrollbar.pack(anchor=NW, fill=X)
+
+    scrollbar = Scrollbar(Canvas_top_scrollbar, orient=HORIZONTAL, command=Canvas_top.xview)
+    scrollbar.pack(expand=True, fill=BOTH)
+    
+
+    Frame_bottom = Frame(Ready_Frame, borderwidth=1, relief=SOLID)
+    Frame_bottom.pack(expand=True, fill=BOTH)
+
+    Frame_bottom_arrow = Frame(Frame_bottom)
+    Frame_bottom_arrow.pack(anchor=NW, fill=X)
+    
+    Frame_bottom_text = Frame(Frame_bottom)
+    Frame_bottom_text.pack(anchor=NW, expand=True, fill=BOTH)
     
     select_title = cur.execute("""
     SELECT title 
     FROM ready_category;
     """)
+
     ready_category = cur.fetchall()
 
-    btn_ready_list = dict()
-    attributes_list = dict()
+    category = ready_category[0][0]
+    
+    select_text = cur.execute(f"""
+    SELECT ready_text.title, ready_text.text 
+    FROM ready_text
+    JOIN ready_category ON 
+    ready_category.id = ready_text.id_category
+    WHERE ready_category.id = 1;
+    """)
+    ready_text = cur.fetchall()
 
-    for i_category in ready_category:
-        frame_Ready = ttk.Frame(notebook_ready)
-        frame_Ready.pack(fill=BOTH, expand=True)
-        notebook_ready.add(frame_Ready, text=i_category)
+    with_list = int()
 
-        select_text = cur.execute(f"""
-        SELECT ready_text.title, ready_text.text 
-        FROM ready_text
-        JOIN ready_category ON 
-        ready_category.id = ready_text.id_category
-        WHERE ready_category.title = "{i_category[0]}";
-        """)
-        ready_text = cur.fetchall()
+    page = 1
+    page_list = 0
+    len_ready_text = math.ceil(len(ready_text) / 10)
+    
+    category_list = list()
+    btn_ready_list = list()
 
-        page = 1
-        page_list = 1
-        len_ready_text = math.ceil(len(ready_text) / 10)
+    for i_num, i_val in enumerate(ready_category):
+        
+        val = i_val[0]
+        
+        width_btn = int(len(str(val)))
+        with_list += width_btn
 
-        btn_ready_list[i_category] = list()
-        attributes_list[i_category] = {
-            "<--": None,
-            "|": None,
-            "-->": None,
-            "page": page,
-            "page_list": page_list,
-            "len_ready_text": len_ready_text,
-            }
-        for i_val in range(10):
-            try:
-                key = ready_text[i_val][0]
-                val = ready_text[i_val][1]
+        btn_readys = Button(Сanvas_frame, width = width_btn, text = val, bg = "yellow", command = lambda val=val: ready_swap_category(val)) 
+        btn_readys.pack(side=LEFT, expand=True)
+        category_list.append(btn_readys)
 
-                btn_readys = Button(frame_Ready, text = key, bg = "yellow", command= lambda val=val: copy(val)) 
-                btn_readys.pack(fill = X, pady = 10)
-                btn_ready_list[i_category].append(btn_readys)
-                
-            except IndexError:
-                btn_readys = Button(frame_Ready, text = "", bg = "yellow", state='disabled') 
-                btn_readys.pack(fill = X, pady = 10)
+    category_list[0].configure(bg = "white", state='disabled')
+    btn_readys = Button(Сanvas_frame, text = "             ", bg = "yellow", state='disabled') 
+    btn_readys.pack(side=LEFT, expand=True)
 
-        left_btn = Button(frame_Ready, width = 11, text = "<--", bg = "yellow", command = lambda i_category=i_category: ready_back_page(i_category))
-        left_btn.pack(side=LEFT)
-        attributes_list[i_category]["<--"] = left_btn
+    left_btn = Button(Frame_bottom_arrow, width = 11, text = "<--", bg = "yellow", command = ready_back_page)
+    left_btn.pack(side = LEFT)
 
-        center_btn = Button(frame_Ready, width = 4, text = f"{page}/{len_ready_text}", bg = "yellow", command = lambda i_category=i_category: ready_first_page(i_category))
-        center_btn.pack(side=LEFT)
-        attributes_list[i_category]["|"] = center_btn
+    center_btn = Button(Frame_bottom_arrow, width = 4, text = f"{page}/{len_ready_text}", bg = "yellow", command = ready_first_page)
+    center_btn.pack(side = LEFT)
+    
 
-        right_btn = Button(frame_Ready, width = 11, text = "-->", bg = "yellow", command = lambda i_category=i_category: ready_next_page(i_category))
-        right_btn.pack(side=LEFT)
-        attributes_list[i_category]["-->"] = right_btn
+    right_btn = Button(Frame_bottom_arrow, width = 11, text = "-->", bg = "yellow", command = ready_next_page)
+    right_btn.pack(side = LEFT)
+
+    for i_val in range(10):
+        
+        try:
+            key = ready_text[i_val][0]
+            val = ready_text[i_val][1]
+
+            btn_readys = Button(Frame_bottom_text, text = key, bg = "yellow", command= lambda val=val: copy(val)) 
+
+        except IndexError:
+            btn_readys = Button(Frame_bottom_text, text = "", bg = "yellow", state='disabled') 
+        finally:
+            btn_readys.pack(fill = X, pady = 10)
+            btn_ready_list.append(btn_readys)
+    
+    Canvas_top.create_window(0, 0, anchor=NW, window=Сanvas_frame, height=25)
+    Canvas_top.config(scrollregion=(0, 0, with_list*9, 0))
+
 
 class Assembling:
     """
@@ -526,9 +565,8 @@ class Assembling:
     frame_assembling_bot_text = Frame(frame_assembling_bot, width=218, height=100, background="green")
     frame_assembling_bot_text.grid(column=0, row = 1)
 
-    count = 0
     page = 1
-    page_list = 1
+    page_list = 0
 
     cur.execute("SELECT title, text FROM assembling_list;")
     assembling_list = cur.fetchall()
@@ -538,29 +576,36 @@ class Assembling:
     add_btn_assembling_list = []
     label_list = []
 
-    for i_val in assembling_list[page_list - 1: page_list + 13]:
+    for i_val in range(14):
         global btn_assembling, add_btn_assembling, buffer_assembling
 
-        key = i_val[0]
-        val = i_val[1]
+        try:
+            key = assembling_list[i_val][0]
+            val = assembling_list[i_val][1]
 
-        btn_assembling = Button(frame_assembling_left, width = 2, text = "С", bg = "yellow", command = lambda val=val: copy(val, buffer_assembling))
-        btn_assembling.grid(column=0, row = count)
-        btn_assembling_list.append(btn_assembling)
+            btn_assembling = Button(frame_assembling_left, width = 2, text = "С", bg = "yellow", command = lambda val=val: copy(val, buffer_assembling))
+            add_btn_assembling = Button(frame_assembling_left, width = 2, text = "+", bg = "yellow", command = lambda val=val: add_copy(val, buffer_assembling))
+            frame_lb = Frame(frame_assembling_right)
+            lb = Label(frame_lb,  text = key)
 
-        add_btn_assembling = Button(frame_assembling_left, width = 2, text = "+", bg = "yellow", command = lambda val=val: add_copy(val, buffer_assembling))
-        add_btn_assembling.grid(column=1, row = count)
-        add_btn_assembling_list.append(add_btn_assembling)
+        except IndexError:
 
-        frame_lb = Frame(frame_assembling_right)
-        frame_lb.place(rely=0.043 * count, relheight=1, relwidth=1)
+            btn_assembling = Button(frame_assembling_left, width = 2, text = "С", bg = "yellow", state='disabled')
+            add_btn_assembling = Button(frame_assembling_left, width = 2, text = "+", bg = "yellow", state='disabled')
+            frame_lb = Frame(frame_assembling_right)
+            lb = Label(frame_lb,  text = "")
+           
+        finally:
+            btn_assembling.grid(column=0, row = i_val)
+            btn_assembling_list.append(btn_assembling)
 
-        lb = Label(frame_lb,  text = key)
-        lb.grid(column=0, row = count)
-        label_list.append(lb)
+            add_btn_assembling.grid(column=1, row = i_val)
+            add_btn_assembling_list.append(add_btn_assembling)
 
-        count += 1
+            frame_lb.place(rely=0.043 * i_val, relheight=1, relwidth=1)
 
+            lb.grid(column=0, row = i_val)
+            label_list.append(lb)
 
     left_btn = Button(frame_assembling_bot_arrow, width = 11, text = "<--", bg = "yellow", command = assembling_back_page)
     left_btn.pack(side=LEFT)
