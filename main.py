@@ -2,22 +2,39 @@ from tkinter import *
 from tkinter import ttk
 import pyperclip
 import sqlite3
+import ctypes
 import math
 conn = sqlite3.connect('orders.db')
 cur = conn.cursor()
 
 
-def switch_tab(notebook):
-    # получаем текущий индекс выбранной вкладки
-    current_tab = notebook.select()
-    # получаем индекс следующей вкладки
-    next_tab = notebook.index(current_tab) + 1
-    notebook.hide(current_tab)
-    # если текущая вкладка является последней, переключаемся на первую вкладку
-    if next_tab >= notebook.index("end"):
-        next_tab = 0
-    # переключаемся на следующую вкладку
-    notebook.select(next_tab)
+def is_ru_lang_keyboard():
+    """
+    Функция для работы функции keys. Для работы блокнота в русской раскладке
+    """
+    u = ctypes.windll.LoadLibrary("user32.dll")
+    pf = getattr(u, "GetKeyboardLayout")
+    return hex(pf(0)) == '0x4190419'
+
+def keys(event):
+    """
+    Функция для работы блокнота в русской раскладке. Закрепляет за кнопками команты копировать вставить и тд
+    """
+    if is_ru_lang_keyboard():
+        if event.keycode==86:
+            event.widget.event_generate("<<Paste>>")
+        elif event.keycode==67: 
+            pyperclip.copy(event.widget.selection_get())
+        elif event.keycode==88:  
+            pyperclip.copy(event.widget.selection_get())
+            event.widget.delete("sel.first", "sel.last")
+        elif event.keycode==65535: 
+            event.widget.event_generate("<<Clear>>")
+        elif event.keycode==65: 
+            event.widget.event_generate("<<SelectAll>>")
+        elif event.keycode == 90 and (event.state & 0x4):
+            event.widget.edit_undo()
+        # TODO: Добавить Ctrl + backstase
 
 def copy(val, buffer = None):
     """
@@ -92,7 +109,6 @@ def f_counter_plus(label):
     SET count = count + 1""")
     conn.commit()
 
-    
     new_empty = str(int(label["text"]) + 1)
     label["text"] = new_empty
 
@@ -135,6 +151,22 @@ def f_counter_null(label):
 
 
 def assembling_next_page():
+    """
+    Переключение страниц скриптов вперед для вкладки сборочных скриптов
+    
+    Assembling.page - страница скриптов
+    Assembling.page_list - Начальный элемент страницы скриптов
+    Assembling.center_btn - Кнопка с обозначением страницы скриптов
+
+    val_list - Новый список скриптов
+
+    for i_num, i_val in enumerate(Assembling.label_list) - Переименование текста скриптов
+    for i_num, i_val in enumerate(
+        Assembling.btn_assembling_list / add_btn_assembling_list
+        ) - Переименование закрепленных скриптов на кнопках
+
+    """
+        
     if Assembling.page != Assembling.len_assembling_list:
         Assembling.page += 1
         Assembling.page_list += 15
@@ -169,6 +201,21 @@ def assembling_next_page():
     
 
 def assembling_back_page():
+    """
+    Переключение страниц скриптов назад для вкладки сборочных скриптов
+    
+    Assembling.page - страница скриптов
+    Assembling.page_list - Начальный элемент страницы скриптов
+    Assembling.center_btn - Кнопка с обозначением страницы скриптов
+
+    val_list - Новый список скриптов
+
+    for i_num, i_val in enumerate(Assembling.label_list) - Переименование текста скриптов
+    for i_num, i_val in enumerate(
+        Assembling.btn_assembling_list / add_btn_assembling_list
+        ) - Переименование закрепленных скриптов на кнопках
+
+    """
     if Assembling.page != 1:
         Assembling.page -= 1
         Assembling.page_list -= 15
@@ -189,6 +236,22 @@ def assembling_back_page():
                 i_val.configure(state='normal', command = lambda val=val: add_copy(val, buffer_assembling))
 
 def assembling_first_page():
+    """
+    Переключение страниц скриптов на первую для вкладки сборочных скриптов
+    
+    Assembling.page - страница скриптов
+    Assembling.page_list - Начальный элемент страницы скриптов
+    Assembling.center_btn - Кнопка с обозначением страницы скриптов
+
+    val_list - Новый список скриптов
+
+    for i_num, i_val in enumerate(Assembling.label_list) - Переименование текста скриптов
+    for i_num, i_val in enumerate(
+        Assembling.btn_assembling_list / add_btn_assembling_list
+        ) - Переименование закрепленных скриптов на кнопках
+
+    """
+        
     Assembling.page = 1
     Assembling.page_list = 0
     Assembling.center_btn.configure(text = f"{Assembling.page}/{Assembling.len_assembling_list}")
@@ -208,6 +271,19 @@ def assembling_first_page():
             i_val.configure(state='normal', command = lambda val=val: add_copy(val, buffer_assembling))
 
 def ready_next_page():
+    """
+    Переключение страниц скриптов вперед для вкладки готовых скриптов
+    
+    attributes - класс вкладки
+    btn_list - список кнопок
+    attributes.page - страница скриптов
+    attributes.page_list - Начальный элемент страницы скриптов
+
+    val_list - Новый список скриптов
+
+    for i_num, i_val in enumerate(btn_list): - Переименование текста и закрепленных за кнопкой скриптов
+    """
+        
     attributes = Ready
     btn_list = Ready.btn_ready_list
 
@@ -239,6 +315,19 @@ def ready_next_page():
 
 
 def ready_back_page():
+    """
+    Переключение страниц скриптов назад для вкладки готовых скриптов
+    
+    attributes - класс вкладки
+    btn_list - список кнопок
+    attributes.page - страница скриптов
+    attributes.page_list - Начальный элемент страницы скриптов
+
+    val_list - Новый список скриптов
+
+    for i_num, i_val in enumerate(btn_list): - Переименование текста и закрепленных за кнопкой скриптов
+    """
+
     attributes = Ready
     btn_list = Ready.btn_ready_list
 
@@ -269,6 +358,19 @@ def ready_back_page():
 
 
 def ready_first_page():
+    """
+    Переключение страниц скриптов на первую для вкладки готовых скриптов
+    
+    attributes - класс вкладки
+    btn_list - список кнопок
+    attributes.page - страница скриптов
+    attributes.page_list - Начальный элемент страницы скриптов
+
+    val_list - Новый список скриптов
+
+    for i_num, i_val in enumerate(btn_list): - Переименование текста и закрепленных за кнопкой скриптов
+    """
+
     attributes = Ready
     btn_list = Ready.btn_ready_list
     
@@ -298,6 +400,20 @@ def ready_first_page():
             i_val.configure(text = "", state='disabled')
 
 def ready_swap_category(category):
+    """
+    Переключение категорий скриптов для вкладки готовых скриптов
+    
+    Ready.category - Новая категория
+    Ready.page - страница скриптов
+    Ready.page_list - Начальный элемент страницы скриптов
+
+    ready_text - Новый список скриптов
+    len_ready_text - новое максимальное значение для колличества страниц
+
+    for i_val in Ready.category_list - Перекраска кнопок категорий.
+    for i_val in range(10) - Переименование кнопок из ready_text 
+    """
+
     Ready.category = category
     Ready.page = 1
     Ready.page_list = 0
@@ -356,7 +472,7 @@ class main:
 
     frame_bot - Фрейм Вкладок - растянут на всю доступную высоту
 
-    frame_Ready, frame_assembling, frame_rare - Фреймы для закладок
+    frame_Ready, frame_assembling, frame_settings, frame_book - Фреймы для закладок
 
     aut_text_btn - Кнопка вставки в поле aut_text_entry
 
@@ -407,17 +523,20 @@ class main:
     # создаем пару фреймвов
     frame_assembling = ttk.Frame(notebook)
     frame_Ready = ttk.Frame(notebook)
-    frame_rare = ttk.Frame(notebook)
+    frame_settings = ttk.Frame(notebook)
+    frame_book = ttk.Frame(notebook)
+
 
     frame_assembling.pack(fill=BOTH, expand=True)
     frame_Ready.pack(fill=BOTH, expand=True)
-    frame_rare.pack(fill=BOTH, expand=True)
+    frame_settings.pack(fill=BOTH, expand=True)
+    frame_book.pack(fill=BOTH, expand=True)
 
     # добавляем фреймы в качестве вкладок
     notebook.add(frame_assembling, text="СБОРКА")
     notebook.add(frame_Ready, text="ГОТОВЫЕ")
-    notebook.add(frame_rare, text="НАСТРОЙКА")
-
+    notebook.add(frame_settings, text="НАСТРОЙКА")
+    notebook.add(frame_book, text="Б")
 
 class Ready:
     """
@@ -426,26 +545,37 @@ class Ready:
     select_title - Список всех категорий
     select_text - Список всех значений с выбранной категории
 
-    frame_Ready - Вкладка категории
-    btn_readys - Кнопка для копирования скрипта
+    Canvas_top - фрейм для кнопок категорий и скроллбара
+    Сanvas_frame - Фрейм для кнопок категорий
+    Canvas_top_scrollbar - Фрейм для скроллбара
+    scrollbar - скроллбар для прокрутки 
+
+    Frame_bottom - Нижний фрейм для стрелок и кнопок
+    Frame_bottom_arrow - Фрейм для стрелок
+    Frame_bottom_text - Фрейм для кнопок
+
+    ready_category - список категорий
+    with_list - Размер Canvas_top
+    page - Страница скриптов
+    page_list - Начальный элемент страницы скриптов
+    len_ready_text - Максимальное колличество страниц
+    category_list - Лист для категорий скриптов
+    btn_ready_list - Кнопка категорий скриптов
     """
 
-    Ready_Frame = Frame(main.frame_Ready)
-    Ready_Frame.pack(expand=True, fill=BOTH)
-    
-    Canvas_top = Canvas(Ready_Frame, height=25)
+    Canvas_top = Canvas(main.frame_Ready, height=25)
     Canvas_top.pack(anchor=NW, fill=X)
 
     Сanvas_frame = Frame(Canvas_top, height=25)
 
-    Canvas_top_scrollbar = Frame(Ready_Frame, height=10)
+    Canvas_top_scrollbar = Frame(main.frame_Ready, height=10)
     Canvas_top_scrollbar.pack(anchor=NW, fill=X)
 
     scrollbar = Scrollbar(Canvas_top_scrollbar, orient=HORIZONTAL, command=Canvas_top.xview)
     scrollbar.pack(expand=True, fill=BOTH)
     
 
-    Frame_bottom = Frame(Ready_Frame, borderwidth=1, relief=SOLID)
+    Frame_bottom = Frame(main.frame_Ready)
     Frame_bottom.pack(expand=True, fill=BOTH)
 
     Frame_bottom_arrow = Frame(Frame_bottom)
@@ -559,10 +689,10 @@ class Assembling:
     frame_assembling_bot = Frame(main.frame_assembling, width=218, height=100)
     frame_assembling_bot.place(y = 400)
 
-    frame_assembling_bot_arrow = Frame(frame_assembling_bot, width=218, height=25, background="red")
+    frame_assembling_bot_arrow = Frame(frame_assembling_bot, width=218, height=25)
     frame_assembling_bot_arrow.grid(column=0, row = 0)
 
-    frame_assembling_bot_text = Frame(frame_assembling_bot, width=218, height=100, background="green")
+    frame_assembling_bot_text = Frame(frame_assembling_bot, width=218, height=100)
     frame_assembling_bot_text.grid(column=0, row = 1)
 
     page = 1
@@ -620,6 +750,81 @@ class Assembling:
     buffer_assembling.pack()
     buffer_assembling.bind("<Key>", lambda e: "break") 
 
-root.mainloop()
+class Settings:
+    """
+    Вкладка настроек
+    
+    Имеет подвкладки:
+    Настройка сборочных скриптов
+    Настройка Готовых скриптов
+    Общие настройки
 
-input()
+
+    """
+    notebook = ttk.Notebook(main.frame_settings)
+    notebook.pack(expand=True, fill=BOTH)
+
+    # создаем пару фреймвов
+    frame_assembling = ttk.Frame(notebook)
+    frame_Ready = ttk.Frame(notebook)
+    frame_general = ttk.Frame(notebook)
+
+    frame_assembling.pack(fill=BOTH, expand=True)
+    frame_Ready.pack(fill=BOTH, expand=True)
+    frame_general.pack(fill=BOTH, expand=True)
+
+
+    # добавляем фреймы в качестве вкладок
+    notebook.add(frame_assembling, text="Сборка")
+    notebook.add(frame_Ready, text="Готовые")
+    notebook.add(frame_general, text="Общие")
+
+class Settings_Assembling:
+    """
+    Вкладка настроек сборочных скриптов
+
+    #TODO: Доделать
+    """
+    frame_choice = Frame(Settings.frame_assembling, height=25, background="red")
+    frame_choice.pack(fill=X, pady = 10)
+
+    frame_title = Frame(Settings.frame_assembling, height=30, background="green")
+    frame_title.pack(fill=X, pady = 10)
+
+    frame_text = Frame(Settings.frame_assembling, height=350, background="red")
+    frame_text.pack(fill=X, pady = 10)
+
+    frame_btn = Frame(Settings.frame_assembling, height=50, background="green")
+    frame_btn.pack(fill=BOTH)
+
+    frame_choice_num = Frame(frame_choice, width=40, height=25, background="green")
+    frame_choice_num.pack(anchor=NW, side=LEFT)
+
+    frame_choice_val = Frame(frame_choice, width=40, height=25, background="blue")
+    frame_choice_val.pack(anchor=NW, side=LEFT)
+
+    num_list = ["1","2","3"] 
+    val_list = ["+","ку","Да","Го"] 
+
+    variable_num = StringVar(frame_choice_num)
+    variable_num.set(num_list[0]) # default value
+    num_list_menu = ttk.Combobox(frame_choice_num, width=3, textvariable=variable_num, values=num_list)
+    num_list_menu.pack()
+
+    variable_val = StringVar(frame_choice_val)
+    variable_val.set(val_list[1]) # default value
+    val_list_menu = ttk.Combobox(frame_choice_val, width=100, textvariable=variable_val, values=val_list)
+    val_list_menu.pack()
+
+
+class Book:
+    """
+    Вкладка Блокнота
+    book_text - Поле для блокнота растянутое на всю ширину вкладки
+    """
+    book_text = Text(main.frame_book, wrap=WORD, undo=True)
+    book_text.pack(side=LEFT, expand=True, fill = BOTH)
+
+    book_text.bind("<Control-KeyPress>", keys)
+
+root.mainloop()
