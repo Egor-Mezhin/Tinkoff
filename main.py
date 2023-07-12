@@ -6,8 +6,7 @@ import ctypes
 import math
 conn = sqlite3.connect('orders.db')
 cur = conn.cursor()
-
-
+        
 def is_ru_lang_keyboard():
     """
     Функция для работы функции keys. Для работы блокнота в русской раскладке
@@ -147,7 +146,7 @@ def f_counter_null(label):
     SET count = 0""")
     conn.commit()
 
-    label["text"] = 0
+    label["text"] = "0"
 
 
 def assembling_next_page():
@@ -423,11 +422,15 @@ def ready_swap_category(category):
     FROM ready_text
     JOIN ready_category ON 
     ready_category.id = ready_text.id_category
-    WHERE ready_category.title = "{Ready.category}";
+    WHERE ready_category.title = "{Ready.category}"
+    ORDER BY ready_text.id;
     """)
     ready_text = cur.fetchall()
     
     len_ready_text = math.ceil(len(ready_text) / 10)
+    if len_ready_text == 0:
+        len_ready_text = 1
+        
     Ready.len_ready_text = len_ready_text
 
     for i_val in Ready.category_list:
@@ -448,12 +451,386 @@ def ready_swap_category(category):
     
     Ready.center_btn.configure(text = f"1/{len_ready_text}")
 
+def switching_assembling_combobox(event):
+    c = Settings_Assembling
+    choice = c.choice_val_menu.get()
 
+    if choice == "+ Добавить новый скрипт":
+        c.title_empty.delete(0, END)
+        c.title_empty.insert(0, "Титульник")
+
+        c.text_empty.delete("1.0", END)
+        c.text_empty.insert("1.0", "Текст скрипта")
+
+        c.choice_num_menu.configure(values = c.num_list)
+
+        c.btn_save.configure(bg = "green", text = "Сохранить")
+        c.btn_delete.configure(state='disabled')
+    else:
+        index_title = int(choice[:choice.index('|')])
+        
+        text = c.val_list[index_title - 1][2]
+        c.choice_variable_num.set(index_title) 
+
+        c.title_empty.delete(0, END)
+        c.title_empty.insert(0, choice[choice.index(" ") + 1:])
+
+        c.text_empty.delete("1.0", END)
+        c.text_empty.insert("1.0", text)
+        
+        num_list = c.num_list[:len(c.num_list) - 1]
+        c.choice_num_menu.configure(values = num_list)
+
+        c.btn_save.configure(bg = "yellow", text = "Изменить", state='normal')
+        c.btn_delete.configure(state='normal')
+
+def assembling_delete():
+
+    c = Settings_Assembling
+    choice = c.choice_val_menu.get()
+    index_title = int(choice[:choice.index('|')])
+    
+    cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';")
+    cur.execute(f"UPDATE assembling_list SET id = id - 1 WHERE id > '{index_title}'")
+    conn.commit()
+
+    cur.execute("SELECT id, title, text FROM assembling_list;")
+    c.val_list = cur.fetchall()
+
+    num_list = [i_val[0] for i_val in c.val_list]
+    num_list.append(len(num_list) + 1)
+    c.num_list = num_list
+
+    title_list = [f"{i_val[0]}| " + i_val[1] for i_val in c.val_list]
+    c.title_list = ["+ Добавить новый скрипт"] + title_list + ["+ Добавить новый скрипт"]
+    
+    c.choice_variable_num.set(1) 
+    c.choice_variable_val.set(c.title_list[0]) 
+    c.choice_num_menu.configure(values = c.num_list)
+    c.choice_val_menu.configure(values = c.title_list)
+    
+    c.title_empty.delete(0, END)
+    c.title_empty.insert(0, "Титульник")
+    c.text_empty.delete("1.0", END)
+    c.text_empty.insert("1.0", "Текст скрипта")
+    c.btn_save.configure(bg = "green", text = "Сохранить")
+
+def assembling_save():
+    c = Settings_Assembling
+    choice = choice = c.choice_val_menu.get()
+    index = int(c.choice_variable_num.get())
+    title = c.title_empty.get()
+    text = c.text_empty.get("1.0", END)
+
+    if choice == "+ Добавить новый скрипт":
+
+        max_index = len(c.val_list) + 1
+
+        for i_index in range(max_index, index - 1, -1):       
+            cur.execute(f"UPDATE assembling_list SET id = id + 1 WHERE id = '{i_index}'")
+            conn.commit()
+
+        cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text))
+        conn.commit()
+
+    else:
+        index_title = int(choice[:choice.index('|')])
+        if index_title == index:
+            cur.execute(f"UPDATE assembling_list SET title = ?, text = ? WHERE id = ?", (title, text, index_title))
+            conn.commit()
+            
+        elif index_title < index:    
+            cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';")
+            cur.execute(f"UPDATE assembling_list SET id = id - 1 WHERE id > '{index_title}' AND id < '{index + 1}'")
+            cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text))
+            conn.commit()
+
+        else:
+            cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';")
+            
+            for i_index in range(index_title - 1, index - 1, -1):       
+                cur.execute(f"UPDATE assembling_list SET id = id + 1 WHERE id = '{i_index}'")
+                conn.commit()
+
+            cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text))
+            conn.commit()
+        
+
+    cur.execute("SELECT id, title, text FROM assembling_list;")
+    c.val_list = cur.fetchall()
+
+    num_list = [i_val[0] for i_val in c.val_list]
+    num_list.append(len(num_list) + 1)
+    c.num_list = num_list
+    
+    title_list = [f"{i_val[0]}| " + i_val[1] for i_val in c.val_list]
+    c.title_list = ["+ Добавить новый скрипт"] + title_list + ["+ Добавить новый скрипт"]
+    
+    c.choice_variable_num.set(1) 
+    c.choice_variable_val.set(c.title_list[0]) 
+    c.choice_num_menu.configure(values = c.num_list)
+    c.choice_val_menu.configure(values = c.title_list)
+    
+    c.title_empty.delete(0, END)
+    c.title_empty.insert(0, "Титульник")
+
+    c.text_empty.delete("1.0", END)
+    c.text_empty.insert("1.0", "Текст скрипта")
+
+    c.btn_save.configure(bg = "green", text = "Сохранить")
+
+def switching_category_combobox(event):
+    c = Settings_Ready
+    choice = c.choice_category_val.get()
+
+    if choice == "+ Добавить новую категорию":
+        c.title_empty.delete(0, END)
+        c.title_empty.insert(0, "Титульник")
+
+        c.choice_script_num_menu.configure(state='disabled')
+        c.choice_script_menu.configure(state='disabled')
+
+        c.choice_category_num_menu.configure(values = c.category_num_list)
+        
+        c.btn_save.configure(bg = "green", text = "Сохранить")
+        c.btn_delete.configure(state='disabled')
+    else:
+        index_title = int(choice[:choice.index('|')])
+        cur.execute(f"SELECT id FROM ready_category WHERE num = '{index_title}';")
+        id_category = cur.fetchone()[0]
+
+        cur.execute(f"SELECT id, title, text FROM ready_text WHERE id_category = {id_category} ORDER BY id;")
+        c.script_list = cur.fetchall()
+
+        c.script_num_list = [i_val[0] for i_val in c.script_list]
+        c.script_num_list.append(len(c.script_num_list) + 1)
+        c.script_title_list = [f"{i_val[0]}| " + i_val[1] for i_val in c.script_list]
+        c.script_title_list = ["+ Добавить новый скрипт", ""] + c.script_title_list + ["", "+ Добавить новый скрипт"]
+        
+        category_num_list = c.category_num_list[:len(c.category_num_list)-1]
+        c.choice_category_num_menu.configure(values = category_num_list)
+
+        c.choice_script_num_menu.configure(values = c.script_num_list)
+        c.choice_script_menu.configure(values = c.script_title_list , state='readonly')
+
+        c.choice_category_num.set(index_title) 
+ 
+        c.title_empty.delete(0, END)
+        c.title_empty.insert(0, choice[choice.index(" ") + 1:])
+
+        c.btn_save.configure(bg = "yellow", text = "Изменить", state='normal')
+        c.btn_delete.configure(state='normal')
+    
+    c.choice_script_num.set("") 
+    c.choice_script_val.set("") 
+    c.choice_script_num_menu.configure(state='disabled')
+    c.text_empty.delete("1.0", END)
+    c.text_empty.configure(state="disabled")
+
+def ready_delete():
+    c = Settings_Ready
+    choice_category = c.choice_category_val.get()
+    choice_script = c.choice_script_val.get()
+    index_category = int(choice_category[:choice_category.index('|')])
+    
+    if choice_script == "":
+        conn.execute("PRAGMA foreign_keys = 1")
+        cur.execute(f"DELETE FROM ready_category WHERE num = '{index_category}';")
+        cur.execute(f"UPDATE ready_category SET num = num - 1 WHERE num > '{index_category}'")
+        conn.commit()
+    else:    
+        index_script = int(choice_script[:choice_script.index('|')])    
+        cur.execute(f"SELECT id FROM ready_category WHERE num = '{index_category}'")
+        id_category = cur.fetchone()[0]
+        
+            
+        cur.execute(f"DELETE FROM ready_text WHERE id_category = '{id_category}' AND id = '{index_script}';")
+        cur.execute(f"UPDATE ready_text SET id = id - 1 WHERE id_category = '{id_category}' AND id > '{index_script}'")
+        conn.commit()
+    
+    cur.execute(f"SELECT num, title FROM ready_category ORDER BY num;")
+    val_list = cur.fetchall()
+
+    category_num_list = [i_val[0] for i_val in val_list]
+    category_num_list.append(len(category_num_list) + 1)
+    c.category_num_list = category_num_list
+
+    category_list = [f"{i_val[0]}| " + i_val[1] for i_val in val_list]
+    category_list = ["+ Добавить новую категорию"] + category_list + ["+ Добавить новую категорию"]
+    c.category_list = category_list
+
+    c.choice_category_num_menu.configure(values=c.category_num_list)
+    c.choice_category_menu.configure(values=c.category_list)
+    
+    c.choice_script_menu.configure(state='disabled')
+    c.choice_script_num_menu.configure(state='disabled')
+
+    c.choice_category_num.set("1") 
+    c.choice_category_val.set(category_list[0])
+    
+    c.title_empty.delete(0, END)
+    c.title_empty.insert(0, "Титульник")
+
+    c.text_empty.delete("1.0", END)
+
+    c.btn_save.configure(bg = "green", text = "Сохранить")
+    c.btn_delete.configure(state="disabled")
+
+
+def ready_save():
+    c = Settings_Ready
+    choice_category = c.choice_category_val.get()
+    choice_script = c.choice_script_val.get()
+    title = c.title_empty.get()
+    text = c.text_empty.get("1.0", END)
+    category_num = int(c.choice_category_num.get())
+    script_num = c.choice_script_num.get()
+    
+    cur.execute("SELECT title FROM ready_category WHERE title = ?;", (title,))
+    category_choise = cur.fetchall()
+
+    if choice_category == "+ Добавить новую категорию":
+        if len(category_choise) == 0:
+            cur.execute(f"UPDATE ready_category SET num = num + 1 WHERE num >= '{category_num}'")
+            cur.execute("INSERT INTO ready_category(num, title) VALUES (?, ?)", (category_num, title))
+        else:
+            pass #TODO: Добавить обработку если в базе уже есть категория с данным именем
+    
+    elif choice_script == "":
+        index_category = int(choice_category[:choice_category.index('|')])
+        title_val = choice_category[choice_category.index(" ") + 1:]
+
+        if title_val == title or len(category_choise) == 0:
+            if index_category == category_num:
+                cur.execute(f"UPDATE ready_category SET title = ? WHERE num = ?", (title, category_num))
+                
+            elif index_category > category_num:
+                cur.execute(f"UPDATE ready_category SET num = num + 1 WHERE num >= '{category_num}' AND num < '{index_category}'")
+                cur.execute(f"UPDATE ready_category SET num = ?, title = ? WHERE title = ?", (category_num, title, title_val))
+                
+            elif index_category < category_num:
+                cur.execute(f"UPDATE ready_category SET num = num - 1 WHERE num <= '{category_num}' AND num > '{index_category}'")
+                cur.execute(f"UPDATE ready_category SET num = ?, title = ? WHERE title = ?", (category_num, title, title_val))  
+        else:
+            pass #TODO: Добавить обработку если в базе уже есть категория с данным именем
+
+    elif choice_script == "+ Добавить новый скрипт":
+
+        index_category = int(choice_category[:choice_category.index('|')])
+        cur.execute(f"SELECT id FROM ready_category WHERE num = '{index_category}'")
+        id_category = cur.fetchone()[0]
+
+        cur.execute(f"UPDATE ready_text SET id = id + 1 WHERE id >= '{script_num}' AND id_category = {id_category}")
+        cur.execute("INSERT INTO ready_text(id, id_category, title, text) VALUES (?, ?, ?, ?)", (script_num, id_category, title, text))
+        conn.commit()
+    
+    else:
+        index_category = int(choice_category[:choice_category.index('|')])
+        index_script = int(choice_script[:choice_script.index('|')])
+        
+        script_num = int(script_num)
+
+        cur.execute(f"SELECT id FROM ready_category WHERE num = '{index_category}'")
+        id_category = cur.fetchone()[0]
+
+        if script_num == index_script:
+            cur.execute(f"UPDATE ready_text SET title = ?, text = ? WHERE id = ? AND id_category = {id_category}", (title, text, script_num))
+            
+        elif script_num > index_script:
+            cur.execute(f"DELETE FROM ready_text WHERE id = '{index_script}' AND id_category = {id_category};")
+            cur.execute(f"UPDATE ready_text SET id = id - 1 WHERE id > '{index_script}' AND id <= '{script_num}' AND id_category = {id_category}")
+            cur.execute("INSERT INTO ready_text(id, id_category, title, text) VALUES (?, ?, ?, ?)", (script_num, id_category, title, text))
+        
+        elif script_num < index_script:
+            cur.execute(f"DELETE FROM ready_text WHERE id = '{index_script}' AND id_category = {id_category};")
+            cur.execute(f"UPDATE ready_text SET id = id + 1 WHERE id < '{index_script}' AND id >= '{script_num}' AND id_category = {id_category}")
+            cur.execute("INSERT INTO ready_text(id, id_category, title, text) VALUES (?, ?, ?, ?)", (script_num, id_category, title, text))
+        
+        
+  
+    conn.commit()
+
+    cur.execute(f"SELECT num, title FROM ready_category ORDER BY num;")
+    val_list = cur.fetchall()
+
+    category_num_list = [i_val[0] for i_val in val_list]
+    category_num_list.append(len(category_num_list) + 1)
+    c.category_num_list = category_num_list
+
+    category_list = [f"{i_val[0]}| " + i_val[1] for i_val in val_list]
+    category_list = ["+ Добавить новую категорию"] + category_list + ["+ Добавить новую категорию"]
+    c.category_list = category_list
+
+    c.choice_category_num_menu.configure(values=c.category_num_list)
+    c.choice_category_menu.configure(values=c.category_list)
+    
+    c.choice_script_menu.configure(state='disabled')
+    c.choice_script_num_menu.configure(state='disabled')
+
+    c.choice_category_num.set("1") 
+    c.choice_category_val.set(category_list[0])
+    
+    c.title_empty.delete(0, END)
+    c.title_empty.insert(0, "Титульник")
+
+    c.text_empty.delete("1.0", END)
+
+    c.btn_save.configure(bg = "green", text = "Сохранить")
+    c.btn_delete.configure(state="disabled")
+
+def switching_script_combobox(event):
+    c = Settings_Ready 
+    choice_script = c.choice_script_val.get()
+    choice_category = c.choice_category_val.get()
+
+    c.title_empty.delete(0, END)
+    c.text_empty.delete("1.0", END)
+
+    if choice_script == "":
+        c.choice_script_num_menu.configure(state='disabled')
+        c.text_empty.configure(state="disabled")
+        c.choice_script_num.set("")
+
+        c.title_empty.insert(0, choice_category[choice_category.index(" ") + 1:])
+    
+        c.btn_delete.configure(state="normal")
+        c.btn_save.configure(text="Изменить", bg="yellow")
+
+    elif choice_script == "+ Добавить новый скрипт":
+        c.choice_script_num_menu.configure(state="readonly")
+        c.choice_script_num_menu.configure(state="readonly", values = c.script_num_list)
+
+        c.text_empty.configure(state="normal")
+        if c.choice_script_num.get() == "":
+            c.choice_script_num.set(1)
+
+        c.title_empty.insert(0, "Титульник")
+        c.text_empty.insert("1.0", "Текст скрипта")
+
+
+        c.btn_delete.configure(state="disabled")
+        c.btn_save.configure(text="Сохранить", bg="green")
+    else:
+        script_num = int(choice_script[:choice_script.index('|')])
+
+        script_num_list = c.script_num_list[:len(c.script_num_list)-1]
+        c.choice_script_num_menu.configure(state="readonly", values = script_num_list)
+
+        c.text_empty.configure(state="normal")
+        c.choice_script_num.set(script_num)
+
+        c.title_empty.insert(0, choice_script[choice_script.index(" ") + 1:])
+        c.text_empty.insert("1.0", c.script_list[script_num - 1][2])
+
+        c.btn_delete.configure(state="normal")
+        c.btn_save.configure(text="Изменить", bg="yellow")
+        
 
 root = Tk()
 root.title("TCRM+")
 root.geometry("218x640")
-root.resizable(width=False, height=False)
+root.minsize(width=200, height=640)
+root.maxsize(width=300, height=700)
 root.attributes("-topmost",True)
 root.iconbitmap("icon.ico")
 
@@ -512,7 +889,7 @@ class main:
     counter_null.grid(column=2, row = 0)
 
     cur.execute("SELECT count FROM counter")
-    count = cur.fetchone()[0]
+    count = str(cur.fetchone()[0])
     counter = Label(frame_up_counter, name="counter", text= count)
     counter.grid(column=3, row = 0)
 
@@ -586,8 +963,8 @@ class Ready:
     
     select_title = cur.execute("""
     SELECT title 
-    FROM ready_category;
-    """)
+    FROM ready_category
+    ORDER BY num;""")
 
     ready_category = cur.fetchall()
 
@@ -598,15 +975,18 @@ class Ready:
     FROM ready_text
     JOIN ready_category ON 
     ready_category.id = ready_text.id_category
-    WHERE ready_category.id = 1;
+    WHERE ready_category.id = 1
+    ORDER BY ready_text.id;
     """)
     ready_text = cur.fetchall()
-
     with_list = int()
 
     page = 1
     page_list = 0
+    
     len_ready_text = math.ceil(len(ready_text) / 10)
+    if len_ready_text == 0:
+        len_ready_text = 1
     
     category_list = list()
     btn_ready_list = list()
@@ -692,7 +1072,7 @@ class Assembling:
     frame_assembling_bot_arrow = Frame(frame_assembling_bot, width=218, height=25)
     frame_assembling_bot_arrow.grid(column=0, row = 0)
 
-    frame_assembling_bot_text = Frame(frame_assembling_bot, width=218, height=100)
+    frame_assembling_bot_text = Frame(frame_assembling_bot, width=218, height=200)
     frame_assembling_bot_text.grid(column=0, row = 1)
 
     page = 1
@@ -701,7 +1081,8 @@ class Assembling:
     cur.execute("SELECT title, text FROM assembling_list;")
     assembling_list = cur.fetchall()
     len_assembling_list = math.ceil(len(assembling_list) / 14)
-
+    if len_assembling_list == 0:
+        len_assembling_list = 1
     btn_assembling_list = []
     add_btn_assembling_list = []
     label_list = []
@@ -746,7 +1127,7 @@ class Assembling:
     right_btn = Button(frame_assembling_bot_arrow, width = 11, text = "-->", bg = "yellow", command = assembling_next_page)
     right_btn.pack(side=LEFT)
 
-    buffer_assembling = Text(frame_assembling_bot_text, width=25, height=7, wrap=WORD)
+    buffer_assembling = Text(frame_assembling_bot_text, width=25, height=10, wrap=WORD)
     buffer_assembling.pack()
     buffer_assembling.bind("<Key>", lambda e: "break") 
 
@@ -779,43 +1160,150 @@ class Settings:
     notebook.add(frame_Ready, text="Готовые")
     notebook.add(frame_general, text="Общие")
 
+
 class Settings_Assembling:
     """
     Вкладка настроек сборочных скриптов
+    frame_choice - Фрейм для выбора названия скрипта
+    frame_title - Фрейм для имени скрипта
+    frame_text - Фрейм для текста скрипта
+    frame_btn - Фрейм для кнопок удалить сохранить изменить
+
+    frame_choice_num - Дочерний фрейм frame_choice для нумерации скрипта
+    frame_choice_val - Дочерний фрейм frame_choice для названий скриптов
 
     #TODO: Доделать
     """
-    frame_choice = Frame(Settings.frame_assembling, height=25, background="red")
+    frame_choice = Frame(Settings.frame_assembling, height=25)
     frame_choice.pack(fill=X, pady = 10)
 
-    frame_title = Frame(Settings.frame_assembling, height=30, background="green")
+    frame_title = Frame(Settings.frame_assembling, height=30)
     frame_title.pack(fill=X, pady = 10)
 
-    frame_text = Frame(Settings.frame_assembling, height=350, background="red")
+    frame_text = Frame(Settings.frame_assembling, height=350)
     frame_text.pack(fill=X, pady = 10)
 
-    frame_btn = Frame(Settings.frame_assembling, height=50, background="green")
+    frame_btn = Frame(Settings.frame_assembling, height=50)
     frame_btn.pack(fill=BOTH)
 
-    frame_choice_num = Frame(frame_choice, width=40, height=25, background="green")
+    frame_choice_num = Frame(frame_choice, width=40, height=25)
     frame_choice_num.pack(anchor=NW, side=LEFT)
 
-    frame_choice_val = Frame(frame_choice, width=40, height=25, background="blue")
+    frame_choice_val = Frame(frame_choice, width=40, height=25)
     frame_choice_val.pack(anchor=NW, side=LEFT)
 
-    num_list = ["1","2","3"] 
-    val_list = ["+","ку","Да","Го"] 
+    cur.execute("SELECT id, title, text FROM assembling_list;")
+    val_list = cur.fetchall()
 
-    variable_num = StringVar(frame_choice_num)
-    variable_num.set(num_list[0]) # default value
-    num_list_menu = ttk.Combobox(frame_choice_num, width=3, textvariable=variable_num, values=num_list)
-    num_list_menu.pack()
+    num_list = [i_val[0] for i_val in val_list]
+    num_list.append(len(num_list) + 1)
+    title_list = [f"{i_val[0]}| " + i_val[1] for i_val in val_list]
+    title_list = ["+ Добавить новый скрипт"] + title_list + ["+ Добавить новый скрипт"]
+    title_id = 1
+    
+    choice_variable_num = StringVar(frame_choice_num)
+    choice_variable_num.set(1) 
+    choice_num_menu = ttk.Combobox(frame_choice_num, width=3, state = "readonly", textvariable=choice_variable_num, values=num_list)
+    choice_num_menu.pack()
 
-    variable_val = StringVar(frame_choice_val)
-    variable_val.set(val_list[1]) # default value
-    val_list_menu = ttk.Combobox(frame_choice_val, width=100, textvariable=variable_val, values=val_list)
-    val_list_menu.pack()
+    choice_variable_val = StringVar(frame_choice_val)
+    choice_variable_val.set(title_list[0]) 
+    choice_val_menu = ttk.Combobox(frame_choice_val, width=100, state = "readonly", textvariable=choice_variable_val, values=title_list)
+    choice_val_menu.pack()
+    choice_val_menu.bind("<<ComboboxSelected>>", switching_assembling_combobox)
 
+    title_empty = Entry(frame_title, width=100)
+    title_empty.pack()
+
+    text_empty = Text(frame_text, wrap=WORD, undo=True)
+    text_empty.pack(side=LEFT, expand=True, fill = BOTH)
+
+    btn_delete = Button(frame_btn, width = 14, text = "Удалить", state= "disable", bg = "red", command = assembling_delete)
+    btn_delete.pack(side=LEFT)
+    
+    btn_save = Button(frame_btn, width = 14, text = "Сохранить", bg = "green", command = assembling_save)
+    btn_save.pack(side=LEFT)
+
+
+class Settings_Ready:
+    frame_choice_category = Frame(Settings.frame_Ready, height=25)
+    frame_choice_category.pack(fill=X)
+        
+    frame_choice_script = Frame(Settings.frame_Ready, height=25)
+    frame_choice_script.pack(fill=X, pady = 10)
+
+    frame_title = Frame(Settings.frame_Ready, height=30)
+    frame_title.pack(fill=X, pady = 10)
+
+    frame_text = Frame(Settings.frame_Ready, height=300)
+    frame_text.pack(fill=X, pady = 10)
+
+    frame_btn = Frame(Settings.frame_Ready, height=50)
+    frame_btn.pack(fill=BOTH)
+
+    frame_choice_category_num = Frame(frame_choice_category, width=40, height=25)
+    frame_choice_category_num.pack(anchor=NW, side=LEFT)
+
+    frame_choice_category_val = Frame(frame_choice_category, width=40, height=25)
+    frame_choice_category_val.pack(anchor=NW, side=LEFT)
+    
+    frame_choice_script_num = Frame(frame_choice_script, width=40, height=25)
+    frame_choice_script_num.pack(anchor=NW, side=LEFT)
+
+    frame_choice_script_val = Frame(frame_choice_script, width=40, height=25)
+    frame_choice_script_val.pack(anchor=NW, side=LEFT)
+
+    """--- Раздел с категориями  ---"""
+
+    cur.execute("SELECT num, title FROM ready_category ORDER BY num;")
+    category_list = cur.fetchall()
+
+    category_num_list = [i_val[0] for i_val in category_list]
+    category_num_list.append(len(category_num_list) + 1)
+    category_title_list = [f"{i_val[0]}| " + i_val[1] for i_val in category_list]
+    category_title_list = ["+ Добавить новую категорию"] + category_title_list + ["+ Добавить новую категорию"]
+    category_id = 1
+    
+    choice_category_num = StringVar(frame_choice_category_num)
+    choice_category_num.set(1) 
+    choice_category_num_menu = ttk.Combobox(frame_choice_category_num, width=3, state = "readonly", textvariable=choice_category_num, values=category_num_list)
+    choice_category_num_menu.pack()
+
+    choice_category_val = StringVar(frame_choice_category_val)
+    choice_category_val.set(category_title_list[0]) 
+    choice_category_menu = ttk.Combobox(frame_choice_category_val, width=100, state = "readonly", textvariable=choice_category_val, values=category_title_list)
+    choice_category_menu.pack()
+    choice_category_menu.bind("<<ComboboxSelected>>", switching_category_combobox)
+    
+    """--- Раздел с скриптами ---"""
+    script_num_list = list()
+    script_title_list = list()
+
+    script_list = list()
+
+    choice_script_num = StringVar(frame_choice_script_num)
+    choice_script_num.set("") 
+    choice_script_num_menu = ttk.Combobox(frame_choice_script_num, width=3, state = "disabled", textvariable=choice_script_num)
+    choice_script_num_menu.pack()
+
+    choice_script_val = StringVar(frame_choice_script_val)
+    choice_script_val.set("") 
+    choice_script_menu = ttk.Combobox(frame_choice_script_val, width=100, state = "disabled", textvariable=choice_script_val)
+    choice_script_menu.pack()
+    choice_script_menu.bind("<<ComboboxSelected>>", switching_script_combobox)
+
+    """--- Раздел полями ввода  ---"""
+    title_empty = Entry(frame_title, width=100)
+    title_empty.pack()
+
+    text_empty = Text(frame_text, wrap=WORD, undo=True, state= "disable")
+    text_empty.pack(side=LEFT, expand=True, fill = BOTH)
+
+    btn_delete = Button(frame_btn, width = 14, text = "Удалить", state= "disable", bg = "red", command=ready_delete)
+    btn_delete.pack(side=LEFT)
+    
+    btn_save = Button(frame_btn, width = 14, text = "Сохранить", bg = "green", command=ready_save)
+    btn_save.pack(side=LEFT)
 
 class Book:
     """
@@ -826,5 +1314,6 @@ class Book:
     book_text.pack(side=LEFT, expand=True, fill = BOTH)
 
     book_text.bind("<Control-KeyPress>", keys)
+
 
 root.mainloop()

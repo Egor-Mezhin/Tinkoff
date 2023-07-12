@@ -1,14 +1,10 @@
 import sqlite3
 
 # Создание связующей таблицы
-conn = sqlite3.connect('mydatabase.db')
+conn = sqlite3.connect('orders.db')
 cur = conn.cursor()
 
-ready_text_table = cur.execute("""CREATE TABLE IF NOT EXISTS ready_text_time(
-   id INTEGER PRIMARY KEY AUTOINCREMENT,
-   id_category INTEGER,
-   title TEXT,
-   text TEXT);
-""")
+cur.execute("SELECT num, title FROM ready_category WHERE title = 'Прив1';")
+category_list = cur.fetchall()
 
-print("++++++++++")
+print(category_list == [])
