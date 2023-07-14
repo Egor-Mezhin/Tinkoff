@@ -6,7 +6,7 @@ import ctypes
 import math
 conn = sqlite3.connect('orders.db')
 cur = conn.cursor()
-        
+
 def is_ru_lang_keyboard():
     """
     Функция для работы функции keys. Для работы блокнота в русской раскладке
@@ -15,25 +15,36 @@ def is_ru_lang_keyboard():
     pf = getattr(u, "GetKeyboardLayout")
     return hex(pf(0)) == '0x4190419'
 
+
 def keys(event):
     """
     Функция для работы блокнота в русской раскладке. Закрепляет за кнопками команты копировать вставить и тд
     """
-    if is_ru_lang_keyboard():
-        if event.keycode==86:
+    if is_ru_lang_keyboard():    
+        if event.keycode==86: 
             event.widget.event_generate("<<Paste>>")
+
         elif event.keycode==67: 
             pyperclip.copy(event.widget.selection_get())
+
         elif event.keycode==88:  
             pyperclip.copy(event.widget.selection_get())
             event.widget.delete("sel.first", "sel.last")
         elif event.keycode==65535: 
             event.widget.event_generate("<<Clear>>")
+
         elif event.keycode==65: 
             event.widget.event_generate("<<SelectAll>>")
-        elif event.keycode == 90 and (event.state & 0x4):
+
+        elif event.keycode == 90:
             event.widget.edit_undo()
-        # TODO: Добавить Ctrl + backstase
+        
+        elif event.keycode == 8:
+            event.widget.delete("insert-1c wordstart", "insert")
+            
+    elif event.keycode == 8:
+        event.widget.delete("insert-1c wordstart", "insert")
+     
 
 def copy(val, buffer = None):
     """
@@ -52,48 +63,6 @@ def copy(val, buffer = None):
         buffer.insert("2.0", val.format(main.aut_text_entry.get()))
 
 
-def add_copy(val, buffer):
-    """
-    Добавление к копированным данным в буфер обмена
-    
-    val - Копируемый текст
-    buffer - Текстовое поле где отражен скопированный текст
-
-    text - Соединяет содержание буфера обмена с val
-    pyperclip.copy - копирует text в буфер обмена
-    buffer.insert - Вставляет в текстовое поле val
-    """
-        
-    text = pyperclip.paste() + val.format(main.aut_text_entry.get())
-
-    pyperclip.copy(text)
-
-    buffer.insert(END, val.format(main.aut_text_entry.get()))
-
-
-def past(empty):
-
-    """
-    Вставляет в текстовое поле содержимое буфера обмена
-    
-    empty - Поле в которое нужно вставить текст
-
-    empty_str - Содержание буфера обмена
-    empty_new - Новый текст если в конце empty_str есть пробел
-    """
-
-    empty_str = pyperclip.paste()
-    empty_new = str()
-    
-    if empty_str[-1] == " ":
-        empty_new = empty_str[0:len(empty_str)-1]
-    else:
-        empty_new = empty_str
-
-    empty.delete(0, END)
-    empty.insert(0, empty_new)
-        
-
 root = Tk()
 root.title("TCRM+")
 root.geometry("218x640")
@@ -110,28 +79,42 @@ class main:
     счетчик,
     Вкладки.
 
-    frame - Основной фрейм растянутый на все поле
-    frame_up - Фрейм шапки приложения
-    frame_up_aut_text - Фрейм для вставки
-    frame_up_counter - Фрейм счетчика
+    /////// Функции ///////
+    
+    f_counter_minus, f_counter_plus, f_counter_null - Функции контроля счетчика +, -, 0
 
-    frame_bot - Фрейм Вкладок - растянут на всю доступную высоту
-
-    frame_Ready, frame_assembling, frame_settings, frame_book - Фреймы для закладок
-
-    aut_text_btn - Кнопка вставки в поле aut_text_entry
-
-    counter_plus, counter_minus, counter_null - Кнопки контроля счетчика
-
-    counter - Поле ввода счетчика
     """
+
+    def past():
+
+        """
+        Вставляет в текстовое поле содержимое буфера обмена
+        
+        empty - Поле в которое нужно вставить текст
+
+        empty_str - Содержание буфера обмена
+        empty_new - Новый текст если в конце empty_str есть пробел
+        """
+
+        empty_str = pyperclip.paste()
+        empty_new = str()
+        
+        if empty_str[-1] == " ":
+            empty_new = empty_str[0:len(empty_str)-1]
+        else:
+            empty_new = empty_str
+
+        main.aut_text_entry.delete(0, END)
+        main.aut_text_entry.insert(0, empty_new)
+
+
     def f_counter_minus():
         
         """
         Убавляет значение 1 со счетчика
-        empty - поле ввода
 
         cur.execute - Уменьшает счетчик в БД
+        new_empty - новое значение счетчика
         """
 
         if main.counter["text"] > "0":
@@ -144,13 +127,14 @@ class main:
             new_empty = str(int(main.counter["text"]) - 1)
             main.counter["text"] = new_empty
 
+
     def f_counter_plus():
 
         """
         Добавляет к счетчику значение 1
-        empty - поле ввода
 
         cur.execute - Увеличивает счетчик в БД
+        new_empty - новое значение счетчика
         """
 
         cur.execute("""
@@ -166,7 +150,6 @@ class main:
         
         """
         Обнуляет счетчик
-        empty - поле ввода
 
         cur.execute - Обнуляет счетчик в БД
         """
@@ -178,8 +161,28 @@ class main:
 
         main.counter["text"] = "0"
 
-    """ /////Переменные класса///// """
+    """  
+    /////// Фреймы /////// 
 
+    frame - Основной фрейм растянутый на все поле
+    frame_up - Фрейм шапки приложения
+    frame_up_aut_text - Фрейм для вставки
+    frame_up_counter - Фрейм счетчика
+    frame_bot - Фрейм Вкладок - растянут на всю доступную высоту
+    frame_Ready, frame_assembling, frame_settings, frame_book - Фреймы для закладок
+
+    /////// Элементы /////// 
+
+    aut_text_btn - Кнопка вставки в поле aut_text_entry
+    aut_text_entry - Текстовое поле. С него копируют текст для скрипта(обычно имя)
+    counter_plus, counter_minus, counter_null - Кнопки контроля счетчика
+    counter - Поле ввода счетчика
+    notebook - Класс вкладок
+
+    /////// Переменные /////// 
+
+    count - значение счетчика из БД
+    """
     frame = Frame(root)
     frame.place(rely=0, relheight=1, relwidth=1)
 
@@ -195,11 +198,12 @@ class main:
     frame_bot = Frame(frame)
     frame_bot.place(rely=0.08, relheight=1, relwidth=1)
 
-    aut_text_btn = Button(frame_up_aut_text, text = "Вставить", width=10, command= lambda: past(main.aut_text_entry))
+    aut_text_btn = Button(frame_up_aut_text, text = "Вставить", width=10, command= lambda: main.past())
     aut_text_btn.grid(column=0, row = 0)
 
     aut_text_entry = Entry(frame_up_aut_text, width=100)
     aut_text_entry.grid(column=1, row = 0)
+    aut_text_entry.bind("<Control-KeyPress>", keys)
 
     counter_plus = Button(frame_up_counter, text = "+", width=10, command = f_counter_plus)
     counter_plus.grid(column=0, row = 0, sticky="nswe")
@@ -215,11 +219,9 @@ class main:
     counter = Label(frame_up_counter, name="counter", text= count)
     counter.grid(column=3, row = 0)
 
-    # создаем набор вкладок
     notebook = ttk.Notebook(frame_bot)
     notebook.pack(expand=True, fill=BOTH)
 
-    # создаем пару фреймвов
     frame_assembling = ttk.Frame(notebook)
     frame_Ready = ttk.Frame(notebook)
     frame_settings = ttk.Frame(notebook)
@@ -231,7 +233,6 @@ class main:
     frame_settings.pack(fill=BOTH, expand=True)
     frame_book.pack(fill=BOTH, expand=True)
 
-    # добавляем фреймы в качестве вкладок
     notebook.add(frame_assembling, text="СБОРКА")
     notebook.add(frame_Ready, text="ГОТОВЫЕ")
     notebook.add(frame_settings, text="НАСТРОЙКА")
@@ -241,34 +242,24 @@ class main:
 class Ready:
     """
     Вкладка готовых скриптов. Содержит вкладки категорий скриптов и кнопки для копирования скриптов
-
-    select_title - Список всех категорий
-    select_text - Список всех значений с выбранной категории
-
-    Canvas_top - фрейм для кнопок категорий и скроллбара
-    Сanvas_frame - Фрейм для кнопок категорий
-    Canvas_top_scrollbar - Фрейм для скроллбара
-    scrollbar - скроллбар для прокрутки 
-
-    Frame_bottom - Нижний фрейм для стрелок и кнопок
-    Frame_bottom_arrow - Фрейм для стрелок
-    Frame_bottom_text - Фрейм для кнопок
-
-    ready_category - список категорий
-    with_list - Размер Canvas_top
-    page - Страница скриптов
-    page_list - Начальный элемент страницы скриптов
-    len_ready_text - Максимальное колличество страниц
-    category_list - Лист для категорий скриптов
-    btn_ready_list - Кнопка категорий скриптов
+    
+    /////// Функции ///////
+    
+    ready_next_page, ready_first_page, ready_back_page - Управление страницами скриптов +1, -1, 1
+    ready_swap_category - Переключение категорий при нажатии на кнопку категории
     """
+
+
     def ready_next_page():
         """
         Переключение страниц скриптов вперед для вкладки готовых скриптов
 
         val_list - Новый список скриптов
+        key - Титульник скрипта
+        val - Текст скрипта
 
-        for i_num, i_val in enumerate(btn_list): - Переименование текста и закрепленных за кнопкой скриптов
+        Цикл 1: - Переименование текста и закрепленных за кнопкой скриптов
+            Исключение IndexError - Если в списке закончились значения то кнопка неактивна
         """
 
         c = Ready
@@ -277,26 +268,26 @@ class Ready:
             c.page += 1
             c.page_list += 10
 
-            len_page = c.len_ready_text
-            page = c.page
-            page_list = c.page_list
-
-            c.center_btn.configure(text = f"{page}/{len_page}")
+            c.center_btn.configure(text = f"{c.page}/{c.len_ready_text}")
             
             cur.execute(f"""
                         SELECT ready_text.title, ready_text.text
                         FROM ready_text
                         JOIN ready_category ON ready_category.id = ready_text.id_category
                         WHERE ready_category.title = "{c.category}"
-                        LIMIT 10 OFFSET {page_list};
+                        LIMIT 10 OFFSET {c.page_list};
                         """)
             val_list = cur.fetchall()
-            for i_num, i_val in enumerate(c.btn_ready_list):
-                try:
-                    val = val_list[i_num][1]
-                    i_val.configure(text = val_list[i_num][0], command = lambda val=val: copy(val))
 
-                except IndexError:
+            for i_num, i_val in enumerate(c.btn_script_ready_list): #Цикл 1
+                try:
+
+                    key = val_list[i_num][0]
+                    val = val_list[i_num][1]
+                    
+                    i_val.configure(text = key, command = lambda val=val: copy(val))
+
+                except IndexError: #Исключение IndexError
                     i_val.configure(text = "", state='disabled')
 
 
@@ -305,8 +296,10 @@ class Ready:
         Переключение страниц скриптов назад для вкладки готовых скриптов
 
         val_list - Новый список скриптов
+        key - Титульник скрипта
+        val - Текст скрипта
 
-        for i_num, i_val in enumerate(btn_list): - Переименование текста и закрепленных за кнопкой скриптов
+        Цикл 1: - Переименование текста и закрепленных за кнопкой скриптов
         """
 
         c = Ready
@@ -315,21 +308,18 @@ class Ready:
             c.page -= 1
             c.page_list -= 10
 
-            len_page = c.len_ready_text
-            page = c.page
-            page_list = c.page_list
-
-            c.center_btn.configure(text = f"{page}/{len_page}")
+            c.center_btn.configure(text = f"{c.page}/{c.len_ready_text}")
             
             cur.execute(f"""
                         SELECT ready_text.title, ready_text.text
                         FROM ready_text
                         JOIN ready_category ON ready_category.id = ready_text.id_category
                         WHERE ready_category.title = "{c.category}"
-                        LIMIT 10 OFFSET {page_list};
+                        LIMIT 10 OFFSET {c.page_list};
                         """)
             val_list = cur.fetchall()
-            for i_num, i_val in enumerate(c.btn_ready_list):
+
+            for i_num, i_val in enumerate(c.btn_script_ready_list): # Цикл 1
                 
                 key = val_list[i_num][0]
                 val = val_list[i_num][1]
@@ -341,14 +331,12 @@ class Ready:
         """
         Переключение страниц скриптов на первую для вкладки готовых скриптов
         
-        attributes - класс вкладки
-        btn_list - список кнопок
-        attributes.page - страница скриптов
-        attributes.page_list - Начальный элемент страницы скриптов
-
         val_list - Новый список скриптов
+        key - Титульник скрипта
+        val - Текст скрипта
 
-        for i_num, i_val in enumerate(c.btn_ready_list): - Переименование текста и закрепленных за кнопкой скриптов
+        Цикл 1: - Переименование текста и закреплных за кнопкой скриптов
+        
         """
 
         c = Ready
@@ -366,7 +354,8 @@ class Ready:
                     LIMIT 10 OFFSET {c.page_list};
                     """)
         val_list = cur.fetchall()
-        for i_num, i_val in enumerate(c.btn_ready_list):
+
+        for i_num, i_val in enumerate(c.btn_script_ready_list): # Цикл 1
             try:
                 val = val_list[i_num][1]
                 i_val.configure(text = val_list[i_num][0], command = lambda val=val: copy(val))
@@ -374,19 +363,17 @@ class Ready:
             except IndexError:
                 i_val.configure(text = "", state='disabled')
 
+
     def ready_swap_category(category):
         """
         Переключение категорий скриптов для вкладки готовых скриптов
-        
-        Ready.category - Новая категория
-        Ready.page - страница скриптов
-        Ready.page_list - Начальный элемент страницы скриптов
 
         ready_text - Новый список скриптов
         len_ready_text - новое максимальное значение для колличества страниц
 
-        for i_val in Ready.category_list - Перекраска кнопок категорий.
-        for i_val in range(10) - Переименование кнопок из ready_text 
+        Цикл 1 - Перекраска кнопок категорий.
+        Цикл 2 - Переименование кнопок из ready_text 
+            Исключение IndexError - Если скрипты закончились в списке то кнопка неактивна
         """
         c = Ready
         c.category = category
@@ -409,25 +396,66 @@ class Ready:
             
         c.len_ready_text = len_ready_text
 
-        for i_val in c.category_list:
+        for i_val in c.category_list: # Цикл 1
             if i_val["text"] == category:
                 i_val.configure(bg = "white", state='disabled') 
             else:
                 i_val.configure(bg = "yellow", state='normal')
 
-        for i_val in range(10):
+        for i_val in range(10): # Цикл 2
             try:
                 key = ready_text[i_val][0]
                 val = ready_text[i_val][1]
 
-                c.btn_ready_list[i_val].configure(text = key, state='normal', command= lambda val=val: copy(val))
+                c.btn_script_ready_list[i_val].configure(text = key, state='normal', command= lambda val=val: copy(val))
 
-            except IndexError:
-                c.btn_ready_list[i_val].configure(text = "", state='disabled') 
+            except IndexError: # Исключение IndexError
+                c.btn_script_ready_list[i_val].configure(text = "", state='disabled') 
         
         c.center_btn.configure(text = f"1/{len_ready_text}")
 
-    """ /////Переменные класса///// """
+    """ 
+    /////// Фреймы /////// 
+
+    Canvas_top - фрейм для кнопок категорий и скроллбара
+    Сanvas_frame - Фрейм для кнопок категорий
+    Canvas_top_scrollbar - Фрейм для скроллбара
+    Frame_bottom - Нижний фрейм для стрелок и кнопок
+    Frame_bottom_arrow - Фрейм для стрелок
+    Frame_bottom_text - Фрейм для кнопок
+
+    /////// Элементы /////// 
+    
+    scrollbar - скроллбар для прокрутки 
+    btn_readys - Кнопка категории
+    btn_script_ready - Кнопка скрипта категори
+    left_btn - Кнопка страница скриптов назад
+    center_btn - Кнопка первая страница скриптов 
+    right_btn - Кнопка страница скриптов вперед
+
+    /////// Переменные /////// 
+
+    ready_text - Список всех значений с выбранной категории
+    ready_category - список категорий
+    category - Титульник первой категории в спике категорий
+    with_list - Размер Canvas_top
+    page - Страница скриптов
+    page_list - Начальный элемент страницы скриптов
+    len_ready_text - Максимальное колличество страниц
+    category_list - Лист для категорий скриптов
+    btn_script_ready_list - Лист для кнопок категорий скриптов
+
+    /////// Циклы /////// 
+    Цикл 1 - Задать название кнопкам категорий btn_readys из списка категорий ready_category
+        val - Титульник категорий
+        width_btn - длинна кнопки
+    Цикл 2 - Создание 10 кнопок и генерация названий кнопок 
+        key - Титульник кнопки
+        val - Текст кнопки
+        IndexError - Если в списке закончились названия кнопок то кнопка неактивна
+
+
+    """
 
     Canvas_top = Canvas(main.frame_Ready, height=25)
     Canvas_top.pack(anchor=NW, fill=X)
@@ -450,16 +478,12 @@ class Ready:
     Frame_bottom_text = Frame(Frame_bottom)
     Frame_bottom_text.pack(anchor=NW, expand=True, fill=BOTH)
     
-    select_title = cur.execute("""
-    SELECT title 
-    FROM ready_category
-    ORDER BY num;""")
-
+    cur.execute("""SELECT title FROM ready_category ORDER BY num;""")
     ready_category = cur.fetchall()
 
     category = ready_category[0][0]
     
-    select_text = cur.execute(f"""
+    cur.execute(f"""
     SELECT ready_text.title, ready_text.text 
     FROM ready_text
     JOIN ready_category ON 
@@ -468,6 +492,7 @@ class Ready:
     ORDER BY ready_text.id;
     """)
     ready_text = cur.fetchall()
+
     with_list = int()
 
     page = 1
@@ -478,9 +503,9 @@ class Ready:
         len_ready_text = 1
     
     category_list = list()
-    btn_ready_list = list()
+    btn_script_ready_list = list()
 
-    for i_num, i_val in enumerate(ready_category):
+    for i_num, i_val in enumerate(ready_category): # Цикл 1
         
         val = i_val[0]
         
@@ -488,66 +513,68 @@ class Ready:
         with_list += width_btn
 
         btn_readys = Button(Сanvas_frame, width = width_btn, text = val, bg = "yellow", command = lambda val=val: Ready.ready_swap_category(val)) 
-        btn_readys.pack(side=LEFT, expand=True)
+        btn_readys.pack(side=LEFT, expand=True, fill="both")
         category_list.append(btn_readys)
 
     category_list[0].configure(bg = "white", state='disabled')
     btn_readys = Button(Сanvas_frame, text = "             ", bg = "yellow", state='disabled') 
-    btn_readys.pack(side=LEFT, expand=True)
+    btn_readys.pack(side=LEFT, expand=True, fill="both")
 
-    left_btn = Button(Frame_bottom_arrow, width = 11, text = "<--", bg = "yellow", command = ready_back_page)
-    left_btn.pack(side = LEFT)
+    left_btn = Button(Frame_bottom_arrow, text = "<--", bg = "yellow", command = ready_back_page)
+    left_btn.pack(side = LEFT, expand=True, fill="both")
 
     center_btn = Button(Frame_bottom_arrow, width = 4, text = f"{page}/{len_ready_text}", bg = "yellow", command = ready_first_page)
     center_btn.pack(side = LEFT)
     
+    right_btn = Button(Frame_bottom_arrow, text = "-->", bg = "yellow", command = ready_next_page)
+    right_btn.pack(side = LEFT, expand=True, fill="both")
 
-    right_btn = Button(Frame_bottom_arrow, width = 11, text = "-->", bg = "yellow", command = ready_next_page)
-    right_btn.pack(side = LEFT)
-
-    for i_val in range(10):
+    for i_val in range(10): # Цикл 2
         
         try:
             key = ready_text[i_val][0]
             val = ready_text[i_val][1]
 
-            btn_readys = Button(Frame_bottom_text, text = key, bg = "yellow", command= lambda val=val: copy(val)) 
+            btn_script_readys = Button(Frame_bottom_text, text = key, bg = "yellow", command= lambda val=val: copy(val)) 
 
         except IndexError:
-            btn_readys = Button(Frame_bottom_text, text = "", bg = "yellow", state='disabled') 
+            btn_script_readys = Button(Frame_bottom_text, text = "", bg = "yellow", state='disabled') 
         finally:
-            btn_readys.pack(fill = X, pady = 10)
-            btn_ready_list.append(btn_readys)
+            btn_script_readys.pack(fill = X, pady = 10)
+            btn_script_ready_list.append(btn_script_readys)
     
     Canvas_top.create_window(0, 0, anchor=NW, window=Сanvas_frame, height=25)
     Canvas_top.config(scrollregion=(0, 0, with_list*9, 0))
 
-
 class Assembling:
     """
-    Вкладка сборочных скриптов. Имеет Кнопки:
-    Копировать,
-    Добавить к скопированному,
-    Вперед X скриптов
-    Назад X скриптов
+    Вкладка сборочных скриптов.
 
-    Имеет текстовое поле для просмотра скопированного
+    /////// Функции /////// 
+    add_copy - Функция кнопки добавления скрипта
 
-    frame_assembling_left - Фрейм для кнопок копировать и добавить
-    frame_assembling_right - Фрейм для титульников для кнопок копирования
+    assembling_next_page, assembling_back_page, assembling_first_page - Управление страницами скриптов
 
-    frame_assembling_bot - Фрейм для кнопок переключения и текстового поля буфера
-    frame_assembling_bot_arrow - Фрейм для кнопок переключения
-    frame_assembling_bot_text - Фрейм для текстового поля буфера
-
-    count - счетчик для столбцов
-    assembling_list - список титульников и текстов сборочных скриптов
-
-    btn_assembling - Кнопка копировать
-    add_btn_assembling - кнопка добавить к скопированному
-    frame_lb - фрейм для текста
-    lb - титульник для кнопок копирования
     """
+
+    
+    def add_copy(val, buffer):
+        """
+        Добавление к копированным данным в буфер обмена
+        
+        val - Копируемый текст
+        buffer - Текстовое поле где отражен скопированный текст
+
+        text - Соединяет содержание буфера обмена с val
+        pyperclip.copy - копирует text в буфер обмена
+        buffer.insert - Вставляет в текстовое поле val
+        """
+            
+        text = pyperclip.paste() + val.format(main.aut_text_entry.get())
+
+        pyperclip.copy(text)
+
+        buffer.insert(END, val.format(main.aut_text_entry.get()))
 
 
     def assembling_next_page():
@@ -556,44 +583,42 @@ class Assembling:
         
         val_list - Новый список скриптов
 
-        for i_num, i_val in enumerate(Assembling.label_list) - Переименование текста скриптов
-        for i_num, i_val in enumerate(
-            Assembling.btn_assembling_list / add_btn_assembling_list
-            ) - Переименование закрепленных скриптов на кнопках
-
+        Цикл 1 - Переименование текста скриптов
+        Цикл 2 - Переименование закрепленных скриптов на кнопках копирования
+        Цикл 3 - Переименование закрепленных скриптов на кнопках добавления
+            IndexError - Если скрипты закончились в списке то кнопки неактивны текста нет
         """
-        с = Assembling
-        if с.page != с.len_assembling_list:
-            с.page += 1
-            с.page_list += 15
-            с.center_btn.configure(text = f"{с.page}/{с.len_assembling_list}")
+        c = Assembling
+        if c.page != c.len_assembling_list:
+            c.page += 1
+            c.page_list += 15
+            c.center_btn.configure(text = f"{c.page}/{c.len_assembling_list}")
 
-            cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {с.page_list - 1};")
+            cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {c.page_list - 1};")
             val_list = cur.fetchall()
 
-            for i_num, i_val in enumerate(с.label_list):
+            for i_num, i_val in enumerate(c.label_list): # Цикл 1 
                 try:
                     i_val.configure(text = val_list[i_num][0])
                     
                 except IndexError:
                     i_val.configure(text = "")
             
-            for i_num, i_val in enumerate(с.btn_assembling_list):
+            for i_num, i_val in enumerate(c.btn_assembling_list): # Цикл 2
                 try:
                     val = val_list[i_num][1]
-                    i_val.configure(command = lambda val=val: copy(val, buffer_assembling))
+                    i_val.configure(command = lambda val=val: copy(val, c.buffer_assembling))
 
                 except IndexError:
                     i_val.configure(state='disabled')
 
-            for i_num, i_val in enumerate(с.add_btn_assembling_list):
+            for i_num, i_val in enumerate(c.add_btn_assembling_list): # Цикл 3
                 try:
                     val = val_list[i_num][1]
-                    i_val.configure(command = lambda val=val: add_copy(val, buffer_assembling))
+                    i_val.configure(command = lambda val=val: c.add_copy(val, c.buffer_assembling))
 
                 except IndexError:
                     i_val.configure(state='disabled')
-            
         
 
     def assembling_back_page():
@@ -602,46 +627,41 @@ class Assembling:
 
         val_list - Новый список скриптов
 
-        for i_num, i_val in enumerate(Assembling.label_list) - Переименование текста скриптов
-        for i_num, i_val in enumerate(
-            Assembling.btn_assembling_list / add_btn_assembling_list
-            ) - Переименование закрепленных скриптов на кнопках
-
+        Цикл 1 - Переименование текста скриптов
+        Цикл 2 - Переименование закрепленных скриптов на кнопках копирования
+        Цикл 3 - Переименование закрепленных скриптов на кнопках добавления
         """
-        с = Assembling
-        if с.page != 1:
-            с.page -= 1
-            с.page_list -= 15
-            с.center_btn.configure(text = f"{с.page}/{с.len_assembling_list}")
+        c = Assembling
+        if c.page != 1:
+            c.page -= 1
+            c.page_list -= 15
+            c.center_btn.configure(text = f"{c.page}/{c.len_assembling_list}")
 
-            cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {с.page_list - 1};")
+            cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {c.page_list - 1};")
             val_list = cur.fetchall()
 
-            for i_num, i_val in enumerate(с.label_list):
+            for i_num, i_val in enumerate(c.label_list): # Цикл 1
                 i_val.configure(text = val_list[i_num][0])
 
-            for i_num, i_val in enumerate(с.btn_assembling_list):
-                    val = val_list[i_num][1]
-                    i_val.configure(state='normal', command = lambda val=val: copy(val, buffer_assembling))
+            for i_num, i_val in enumerate(c.btn_assembling_list): # Цикл 2
+                val = val_list[i_num][1]
+                i_val.configure(state='normal', command = lambda val=val: copy(val, c.buffer_assembling))
 
-            for i_num, i_val in enumerate(с.add_btn_assembling_list):
-                    val = val_list[i_num][1]
-                    i_val.configure(state='normal', command = lambda val=val: add_copy(val, buffer_assembling))
+
+            for i_num, i_val in enumerate(c.add_btn_assembling_list): # Цикл 3
+                val = val_list[i_num][1]
+                i_val.configure(state='normal', command = lambda val=val: c.add_copy(val, c.buffer_assembling))
+
 
     def assembling_first_page():
         """
         Переключение страниц скриптов на первую для вкладки сборочных скриптов
-        
-        Assembling.page - страница скриптов
-        Assembling.page_list - Начальный элемент страницы скриптов
-        Assembling.center_btn - Кнопка с обозначением страницы скриптов
 
         val_list - Новый список скриптов
 
-        for i_num, i_val in enumerate(Assembling.label_list) - Переименование текста скриптов
-        for i_num, i_val in enumerate(
-            Assembling.btn_assembling_list / add_btn_assembling_list
-            ) - Переименование закрепленных скриптов на кнопках
+        Цикл 1 - Переименование текста скриптов
+        Цикл 2 - Переименование закрепленных скриптов на кнопках копирования
+        Цикл 3 - Переименование закрепленных скриптов на кнопках добавления
 
         """
         c = Assembling
@@ -652,87 +672,126 @@ class Assembling:
         cur.execute(f"SELECT title, text FROM assembling_list LIMIT 14 OFFSET {c.page_list - 1};")
         val_list = cur.fetchall()
 
-        for i_num, i_val in enumerate(c.label_list):
+        for i_num, i_val in enumerate(c.label_list): # Цикл 1
             i_val.configure(text = val_list[i_num][0])
 
-        for i_num, i_val in enumerate(c.btn_assembling_list):
-                val = val_list[i_num][1]
-                i_val.configure(state='normal', command = lambda val=val: copy(val, buffer_assembling))
+        for i_num, i_val in enumerate(c.btn_assembling_list): # Цикл 2
+            val = val_list[i_num][1]
+            i_val.configure(state='normal', command = lambda val=val: copy(val, c.buffer_assembling))
 
-        for i_num, i_val in enumerate(c.add_btn_assembling_list):
-                val = val_list[i_num][1]
-                i_val.configure(state='normal', command = lambda val=val: add_copy(val, buffer_assembling))
+        for i_num, i_val in enumerate(c.add_btn_assembling_list): # Цикл 3
+            val = val_list[i_num][1]
+            i_val.configure(state='normal', command = lambda val=val: c.add_copy(val, c.buffer_assembling))
+    """ 
+    /////// Фреймы /////// 
 
-    """ /////Переменные класса///// """
-    frame_assembling_left = Frame(main.frame_assembling, width=43.6, height=600)
-    frame_assembling_left.pack(side=LEFT, anchor="nw")
+    frame_assembling_left - Фрейм для кнопок копировать и добавить
+    frame_assembling_right - Фрейм для титульников для кнопок копирования
+    frame_assembling_bot - Фрейм для кнопок переключения и текстового поля буфера
+    frame_assembling_bot_arrow - Фрейм для кнопок переключения
+    frame_assembling_bot_text - Фрейм для текстового поля буфера
+    frame_lb - фрейм для текста
+    
+    /////// Элементы /////// 
 
-    frame_assembling_right = Frame(main.frame_assembling, width=174.8, height=600)
-    frame_assembling_right.pack(side=LEFT, anchor="nw")
+    btn_assembling - Кнопка копировать
+    add_btn_assembling - кнопка добавить к скопированному
+    lb - Текстовое поле для титульника кнопки
+    left_btn - Кнопка страница скриптов назад
+    center_btn - Кнопка первая страница скриптов 
+    right_btn - Кнопка страница скриптов вперед
+    c.buffer_assembling - текстовое поле для отображения скопированного
 
-    frame_assembling_bot = Frame(main.frame_assembling, width=218, height=100)
-    frame_assembling_bot.place(y = 400)
+    /////// Переменные /////// 
 
-    frame_assembling_bot_arrow = Frame(frame_assembling_bot, width=218, height=25)
-    frame_assembling_bot_arrow.grid(column=0, row = 0)
+    page - Страница скриптов
+    page_list - Номер начального скрипта  
+    assembling_list - список титульников и текстов сборочных скриптов
+    btn_assembling_list - Список кнопок для копирования
+    add_btn_assembling_list - Список кнопок для добавления к скопированному
+    label_list - Список текстов
+    count - счетчик для столбцов
+    
 
-    frame_assembling_bot_text = Frame(frame_assembling_bot, width=218, height=200)
-    frame_assembling_bot_text.grid(column=0, row = 1)
+    /////// Циклы /////// 
+
+    Цикл 1 - Создает 14 фреймов для кнопко и присваиваем им текст и титульники
+        IndexError - Если в списке нет значений то кнопки неактивны
+        key - титульник кнопки
+        val - Текст кнопки
+        lb - титульник для кнопок копирования
+    """
+    frame_assembling_bot_arrow = Frame(main.frame_assembling, height=25)
+    frame_assembling_bot_arrow.pack(fill = X)
+
+    frame_assembling_script = Frame(main.frame_assembling, height=400)
+    frame_assembling_script.pack(fill = X)
+
+    frame_assembling_bot_text = Frame(main.frame_assembling, height=300)
+    frame_assembling_bot_text.pack(fill = X)
+
 
     page = 1
     page_list = 0
 
     cur.execute("SELECT title, text FROM assembling_list;")
     assembling_list = cur.fetchall()
+
     len_assembling_list = math.ceil(len(assembling_list) / 14)
     if len_assembling_list == 0:
         len_assembling_list = 1
+        
     btn_assembling_list = []
     add_btn_assembling_list = []
     label_list = []
 
-    for i_val in range(14):
-        global btn_assembling, add_btn_assembling, buffer_assembling
+    left_btn = Button(frame_assembling_bot_arrow, text = "<--", bg = "yellow", command = assembling_back_page) 
+    left_btn.pack(side=LEFT, expand=True, fill="both")
+
+    center_btn = Button(frame_assembling_bot_arrow, width = 5, text = f"{page}/{len_assembling_list}", bg = "yellow", command = assembling_first_page) 
+    center_btn.pack(side=LEFT)
+
+    right_btn = Button(frame_assembling_bot_arrow, text = "-->", bg = "yellow", command = assembling_next_page) 
+    right_btn.pack(side=LEFT, expand=True, fill="both")
+
+    for i_val in range(13): # Цикл 1
+        
+        frame_assembling_script_panel = Frame(frame_assembling_script, height=30)
+        frame_assembling_script_panel.pack(fill = X)
+
+        frame_assembling_script_panel_btn = Frame(frame_assembling_script_panel, height=30)
+        frame_assembling_script_panel_btn.pack(side=LEFT)
+
+        frame_assembling_script_panel_script = Frame(frame_assembling_script_panel, height=30)
+        frame_assembling_script_panel_script.pack(side=LEFT)
 
         try:
             key = assembling_list[i_val][0]
             val = assembling_list[i_val][1]
 
-            btn_assembling = Button(frame_assembling_left, width = 2, text = "С", bg = "yellow", command = lambda val=val: copy(val, buffer_assembling))
-            add_btn_assembling = Button(frame_assembling_left, width = 2, text = "+", bg = "yellow", command = lambda val=val: add_copy(val, buffer_assembling))
-            frame_lb = Frame(frame_assembling_right)
-            lb = Label(frame_lb,  text = key)
+            btn_assembling = Button(frame_assembling_script_panel_btn, width = 3, text = "С", bg = "yellow", command = lambda val=val: copy(val, Assembling.buffer_assembling))
+            add_btn_assembling = Button(frame_assembling_script_panel_btn, width = 3, text = "+", bg = "yellow", command = lambda val=val: Assembling.add_copy(val, Assembling.buffer_assembling))
+            lb = Label(frame_assembling_script_panel_script,  text = key)
 
         except IndexError:
 
-            btn_assembling = Button(frame_assembling_left, width = 2, text = "С", bg = "yellow", state='disabled')
-            add_btn_assembling = Button(frame_assembling_left, width = 2, text = "+", bg = "yellow", state='disabled')
-            frame_lb = Frame(frame_assembling_right)
-            lb = Label(frame_lb,  text = "")
+            btn_assembling = Button(frame_assembling_script_panel_btn, width = 3, text = "С", bg = "yellow", state='disabled')
+            add_btn_assembling = Button(frame_assembling_script_panel_btn, width = 3, text = "+", bg = "yellow", state='disabled')
+            lb = Label(frame_assembling_script_panel_script,  text = "")
            
         finally:
-            btn_assembling.grid(column=0, row = i_val)
+            btn_assembling.pack(side=LEFT)
             btn_assembling_list.append(btn_assembling)
 
-            add_btn_assembling.grid(column=1, row = i_val)
+            add_btn_assembling.pack(side=LEFT)
             add_btn_assembling_list.append(add_btn_assembling)
 
-            frame_lb.place(rely=0.043 * i_val, relheight=1, relwidth=1)
-
-            lb.grid(column=0, row = i_val)
+            lb.grid(column = 0, row = 0)
             label_list.append(lb)
 
-    left_btn = Button(frame_assembling_bot_arrow, width = 11, text = "<--", bg = "yellow", command = assembling_back_page)
-    left_btn.pack(side=LEFT)
 
-    center_btn = Button(frame_assembling_bot_arrow, width = 4, text = f"{page}/{len_assembling_list}", bg = "yellow", command = assembling_first_page)
-    center_btn.pack(side=LEFT)
-
-    right_btn = Button(frame_assembling_bot_arrow, width = 11, text = "-->", bg = "yellow", command = assembling_next_page)
-    right_btn.pack(side=LEFT)
-
-    buffer_assembling = Text(frame_assembling_bot_text, width=25, height=10, wrap=WORD)
-    buffer_assembling.pack()
+    buffer_assembling = Text(frame_assembling_bot_text, wrap=WORD)
+    buffer_assembling.pack(fill=BOTH)
     buffer_assembling.bind("<Key>", lambda e: "break") 
 
 class Settings:
@@ -740,10 +799,9 @@ class Settings:
     Вкладка настроек
     
     Имеет подвкладки:
-    Настройка сборочных скриптов
-    Настройка Готовых скриптов
-    Общие настройки
-
+    frame_assembling - Настройка сборочных скриптов
+    frame_Ready - Настройка Готовых скриптов
+    frame_general - Общие настройки
 
     """
     notebook = ttk.Notebook(main.frame_settings)
@@ -768,19 +826,19 @@ class Settings:
 class Settings_Assembling:
     """
     Вкладка настроек сборочных скриптов
-    frame_choice - Фрейм для выбора названия скрипта
-    frame_title - Фрейм для имени скрипта
-    frame_text - Фрейм для текста скрипта
-    frame_btn - Фрейм для кнопок удалить сохранить изменить
 
-    frame_choice_num - Дочерний фрейм frame_choice для нумерации скрипта
-    frame_choice_val - Дочерний фрейм frame_choice для названий скриптов
+    /////// Функции /////// 
 
-    #TODO: Доделать
+    switching_assembling_combobox - Евент при переключении значений комбобокса choice_val_menu
+    assembling_delete - Удаляет выбранный скрипт
+    assembling_save - Добавляет новый скрипт или изменяет старый
     """
 
         
     def switching_assembling_combobox(event):
+        """
+        Изменяет значения полей title_empty, text_empty, choice_num_menu, btn_save, btn_delete при переключении комбобокса choice_val_menu
+        """
         c = Settings_Assembling
         choice = c.choice_val_menu.get()
 
@@ -813,17 +871,29 @@ class Settings_Assembling:
             c.btn_save.configure(bg = "yellow", text = "Изменить", state='normal')
             c.btn_delete.configure(state='normal')
 
-    def assembling_delete():
 
+    def assembling_delete():
+        """
+        Удаляет выбранный скрипт
+
+        choice - Значение choice_val_menu
+        index_title - Порядковый номер титульника (14| Титульник) index_title = 14
+        num_list - Новый список нумерации скриптов
+        title_list - Новый список титульников скриптов
+
+        SQL 1 - Удаляет скрипт с id = index_title
+        SQL 2 - Перемещяет все скрипты выше index_title на 1 id ниже
+        SQL 3 - Новый список со скриптами
+        """
         c = Settings_Assembling
         choice = c.choice_val_menu.get()
         index_title = int(choice[:choice.index('|')])
         
-        cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';")
-        cur.execute(f"UPDATE assembling_list SET id = id - 1 WHERE id > '{index_title}'")
+        cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';") # SQL 1
+        cur.execute(f"UPDATE assembling_list SET id = id - 1 WHERE id > '{index_title}'") # SQL 2
         conn.commit()
 
-        cur.execute("SELECT id, title, text FROM assembling_list;")
+        cur.execute("SELECT id, title, text FROM assembling_list;") # SQL 3
         c.val_list = cur.fetchall()
 
         num_list = [i_val[0] for i_val in c.val_list]
@@ -843,8 +913,29 @@ class Settings_Assembling:
         c.text_empty.delete("1.0", END)
         c.text_empty.insert("1.0", "Текст скрипта")
         c.btn_save.configure(bg = "green", text = "Сохранить")
+        c.btn_delete.configure(state= "disable")
+    
 
     def assembling_save():
+        """
+        Добавляет или изменяет выбранный скрипт
+
+        choice - Значение choice_val_menu
+        index_title - Порядковый номер титульника (14| Титульник) index_title = 14
+        title - Значение поля title_empty
+        text - Значение поля text_empty
+        num_list - Новый список нумерации скриптов
+        title_list - Новый список титульников скриптов
+
+        SQL 1 - Увеличивает значение id у скрипта где id = i_index
+        SQL 2 - Добавляет скрипт в БД
+        SQL 3 - Изменяет текст и титульник скрипта с id = index_title
+        SQL 4 - Удаляет скрипта с id = index_title
+        SQL 5 - Изменяет id скриптов у которых id больше index_title и меньше index_title + 1
+        SQL 6 - Новый список скриптов
+
+        Цикл 1 - Добавляет 1 к каждому скрипту чей id = i_index
+        """
         c = Settings_Assembling
         choice = choice = c.choice_val_menu.get()
         index = int(c.choice_variable_num.get())
@@ -855,37 +946,37 @@ class Settings_Assembling:
 
             max_index = len(c.val_list) + 1
 
-            for i_index in range(max_index, index - 1, -1):       
-                cur.execute(f"UPDATE assembling_list SET id = id + 1 WHERE id = '{i_index}'")
+            for i_index in range(max_index, index - 1, -1):  # Цикл 1     
+                cur.execute(f"UPDATE assembling_list SET id = id + 1 WHERE id = '{i_index}'") # SQL 1
                 conn.commit()
 
-            cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text))
+            cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text)) # SQL 2
             conn.commit()
 
         else:
             index_title = int(choice[:choice.index('|')])
             if index_title == index:
-                cur.execute(f"UPDATE assembling_list SET title = ?, text = ? WHERE id = ?", (title, text, index_title))
+                cur.execute(f"UPDATE assembling_list SET title = ?, text = ? WHERE id = ?", (title, text, index_title)) # SQL 3
                 conn.commit()
                 
             elif index_title < index:    
-                cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';")
-                cur.execute(f"UPDATE assembling_list SET id = id - 1 WHERE id > '{index_title}' AND id < '{index + 1}'")
-                cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text))
+                cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';") # SQL 4
+                cur.execute(f"UPDATE assembling_list SET id = id - 1 WHERE id > '{index_title}' AND id <= '{index}'") # SQL 5
+                cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text)) # SQL 2
                 conn.commit()
 
             else:
-                cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';")
+                cur.execute(f"DELETE FROM assembling_list where id = '{index_title}';") # SQL 4
                 
-                for i_index in range(index_title - 1, index - 1, -1):       
-                    cur.execute(f"UPDATE assembling_list SET id = id + 1 WHERE id = '{i_index}'")
+                for i_index in range(index_title - 1, index - 1, -1): # Цикл 2  
+                    cur.execute(f"UPDATE assembling_list SET id = id + 1 WHERE id = '{i_index}'") # SQL 1
                     conn.commit()
 
-                cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text))
+                cur.execute("INSERT INTO assembling_list(id, title, text) VALUES (?, ?, ?)", (index, title, text)) # SQL 2
                 conn.commit()
         
 
-        cur.execute("SELECT id, title, text FROM assembling_list;")
+        cur.execute("SELECT id, title, text FROM assembling_list;") # SQL 6
         c.val_list = cur.fetchall()
 
         num_list = [i_val[0] for i_val in c.val_list]
@@ -902,13 +993,41 @@ class Settings_Assembling:
         
         c.title_empty.delete(0, END)
         c.title_empty.insert(0, "Титульник")
-
+        
         c.text_empty.delete("1.0", END)
         c.text_empty.insert("1.0", "Текст скрипта")
 
         c.btn_save.configure(bg = "green", text = "Сохранить")
+        c.btn_delete.configure(state= "disable")
 
-    """ /////Переменные класса///// """
+    """ 
+    /////// Фреймы /////// 
+
+    frame_choice - Фрейм для выбора названия скрипта
+    frame_title - Фрейм для имени скрипта
+    frame_text - Фрейм для текста скрипта
+    frame_btn - Фрейм для кнопок удалить сохранить изменить
+
+    frame_choice_num - Дочерний фрейм frame_choice для нумерации скрипта
+    frame_choice_val - Дочерний фрейм frame_choice для названий скриптов
+
+    /////// Элементы /////// 
+
+    choice_variable_num - Значение в комбобоксе choice_num_menu
+    choice_num_menu - комбобокс номеров скриптов
+    choice_variable_val - Значение в комбобоксе choice_val_menu
+    choice_val_menu - комбобокс значений скриптов
+    title_empty - Поле ввода титульника
+    text_empty - поле ввода текста скрипта
+    btn_delete - кнопка удаления скрипта
+    btn_save - кнопка изменения или добавления скрипта
+
+    /////// Переменные /////// 
+
+    val_list - список скриптов
+    num_list - Список номеров скриптов
+    title_list - Список титульников скриптов
+    """
 
     frame_choice = Frame(Settings.frame_assembling, height=25)
     frame_choice.pack(fill=X, pady = 10)
@@ -935,8 +1054,7 @@ class Settings_Assembling:
     num_list.append(len(num_list) + 1)
     title_list = [f"{i_val[0]}| " + i_val[1] for i_val in val_list]
     title_list = ["+ Добавить новый скрипт"] + title_list + ["+ Добавить новый скрипт"]
-    title_id = 1
-    
+
     choice_variable_num = StringVar(frame_choice_num)
     choice_variable_num.set(1) 
     choice_num_menu = ttk.Combobox(frame_choice_num, width=3, state = "readonly", textvariable=choice_variable_num, values=num_list)
@@ -950,18 +1068,21 @@ class Settings_Assembling:
 
     title_empty = Entry(frame_title, width=100)
     title_empty.pack()
+    title_empty.bind("<Control-KeyPress>", keys)
 
     text_empty = Text(frame_text, wrap=WORD, undo=True)
     text_empty.pack(side=LEFT, expand=True, fill = BOTH)
+    text_empty.bind("<Control-KeyPress>", keys)
 
     btn_delete = Button(frame_btn, width = 14, text = "Удалить", state= "disable", bg = "red", command = assembling_delete)
-    btn_delete.pack(side=LEFT)
+    btn_delete.pack(side=LEFT, expand=True, fill="both")
     
     btn_save = Button(frame_btn, width = 14, text = "Сохранить", bg = "green", command = assembling_save)
-    btn_save.pack(side=LEFT)
+    btn_save.pack(side=LEFT, expand=True, fill="both")
 
 
 class Settings_Ready:
+
 
     def switching_category_combobox(event):
         c = Settings_Ready
@@ -1010,6 +1131,7 @@ class Settings_Ready:
         c.choice_script_num_menu.configure(state='disabled')
         c.text_empty.delete("1.0", END)
         c.text_empty.configure(state="disabled")
+
 
     def ready_delete():
         c = Settings_Ready
@@ -1162,6 +1284,7 @@ class Settings_Ready:
         c.btn_save.configure(bg = "green", text = "Сохранить")
         c.btn_delete.configure(state="disabled")
 
+
     def switching_script_combobox(event):
         c = Settings_Ready 
         choice_script = c.choice_script_val.get()
@@ -1209,7 +1332,14 @@ class Settings_Ready:
             c.btn_delete.configure(state="normal")
             c.btn_save.configure(text="Изменить", bg="yellow")
 
-    """ /////Переменные класса///// """
+    """ 
+    /////// Фреймы /////// 
+
+    /////// Элементы /////// 
+
+    /////// Переменные /////// 
+
+    """
     
     frame_choice_category = Frame(Settings.frame_Ready, height=25)
     frame_choice_category.pack(fill=X)
@@ -1280,15 +1410,17 @@ class Settings_Ready:
     """--- Раздел полями ввода  ---"""
     title_empty = Entry(frame_title, width=100)
     title_empty.pack()
+    title_empty.bind("<Control-KeyPress>", keys)
 
     text_empty = Text(frame_text, wrap=WORD, undo=True, state= "disable")
     text_empty.pack(side=LEFT, expand=True, fill = BOTH)
+    text_empty.bind("<Control-KeyPress>", keys)
 
-    btn_delete = Button(frame_btn, width = 14, text = "Удалить", state= "disable", bg = "red", command=ready_delete)
-    btn_delete.pack(side=LEFT)
+    btn_delete = Button(frame_btn, text = "Удалить", state= "disable", bg = "red", command=ready_delete)
+    btn_delete.pack(side=LEFT, expand=True, fill="both")
     
-    btn_save = Button(frame_btn, width = 14, text = "Сохранить", bg = "green", command=ready_save)
-    btn_save.pack(side=LEFT)
+    btn_save = Button(frame_btn, text = "Сохранить", bg = "green", command=ready_save)
+    btn_save.pack(side=LEFT, expand=True, fill="both")
 
 class Book:
     """
